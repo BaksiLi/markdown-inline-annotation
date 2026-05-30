@@ -18,6 +18,14 @@
     "furigana",
     "inline-annotation"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BaksiLi/vscode-inline-annotation.git"
+  },
+  "homepage": "https://github.com/BaksiLi/vscode-inline-annotation#readme",
+  "bugs": {
+    "url": "https://github.com/BaksiLi/vscode-inline-annotation/issues"
+  },
   "activationEvents": [
     "onLanguage:markdown"
   ],
@@ -28,10 +36,11 @@
   "scripts": {
     "build": "tsc -p .",
     "test": "npm run build && node test/preview.test.mjs",
-    "check": "npm test && node scripts/check-package.mjs"
+    "check": "npm test && node scripts/check-package.mjs",
+    "check:local": "../markdown-it-inline-annotation/node_modules/typescript/bin/tsc -p . && NODE_PATH=.. node test/preview.test.mjs && node scripts/check-package.mjs"
   },
   "dependencies": {
-    "markdown-it-inline-annotation": "file:../markdown-it-inline-annotation"
+    "markdown-it-inline-annotation": "^0.1.1"
   },
   "devDependencies": {
     "@types/markdown-it": "^13.0.0",

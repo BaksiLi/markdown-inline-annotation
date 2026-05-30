@@ -24,8 +24,12 @@ npm install
 npm test
 ```
 
-The package depends on the sibling `../markdown-it-inline-annotation` package
-while the adapter boundary is still being proven.
+Inside this workspace, `npm run check:local` verifies the adapter against the
+sibling `../markdown-it-inline-annotation` build and shared fixture corpus
+without publishing a package first.
+
+Before publishing this extension, publish `markdown-it-inline-annotation`
+`0.1.1` or newer and run the normal install/test path.
 
 ## Safety Model
 
