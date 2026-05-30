@@ -2,7 +2,7 @@
   "name": "vscode-inline-annotation",
   "displayName": "Inline Annotation",
   "description": "Render Inline Annotation syntax in VS Code's built-in Markdown preview.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "baksili",
   "license": "MIT",
   "engines": {
@@ -42,7 +42,7 @@
     "publish:marketplace": "npx @vscode/vsce publish"
   },
   "dependencies": {
-    "markdown-it-inline-annotation": "^0.1.1"
+    "markdown-it-inline-annotation": "^0.2.0"
   },
   "devDependencies": {
     "@types/markdown-it": "^13.0.0",
