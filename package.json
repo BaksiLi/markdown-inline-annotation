@@ -37,7 +37,9 @@
     "build": "tsc -p .",
     "test": "npm run build && node test/preview.test.mjs",
     "check": "npm test && node scripts/check-package.mjs",
-    "check:local": "../markdown-it-inline-annotation/node_modules/typescript/bin/tsc -p . && NODE_PATH=.. node test/preview.test.mjs && node scripts/check-package.mjs"
+    "check:local": "npm install --no-save file:../markdown-it-inline-annotation && npm run check",
+    "package": "npx @vscode/vsce package",
+    "publish:marketplace": "npx @vscode/vsce publish"
   },
   "dependencies": {
     "markdown-it-inline-annotation": "^0.1.1"

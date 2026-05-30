@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import MarkdownIt from "../../markdown-it-inline-annotation/node_modules/markdown-it/index.mjs";
-import inlineAnnotationPlugin from "../../markdown-it-inline-annotation/dist/index.mjs";
+import MarkdownIt from "markdown-it";
+import inlineAnnotationPlugin from "markdown-it-inline-annotation";
 
 const require = createRequire(import.meta.url);
 const extension = require("../dist/extension.js");
-const fixtureCorpus = JSON.parse(
-  readFileSync(new URL("../../markdown-it-inline-annotation/fixtures/html-render.json", import.meta.url), "utf8")
-);
+const fixtureCorpus = require("markdown-it-inline-annotation/fixtures/html-render.json");
 
 function renderInline(input) {
   const md = extension.activate().extendMarkdownIt(new MarkdownIt());
