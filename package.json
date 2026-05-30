@@ -1,0 +1,42 @@
+{
+  "name": "vscode-inline-annotation",
+  "displayName": "Inline Annotation",
+  "description": "Render Inline Annotation syntax in VS Code's built-in Markdown preview.",
+  "version": "0.1.0",
+  "publisher": "baksili",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "markdown-it",
+    "ruby",
+    "furigana",
+    "inline-annotation"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "markdown.markdownItPlugins": true
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "npm run build && node test/preview.test.mjs",
+    "check": "npm test && node scripts/check-package.mjs"
+  },
+  "dependencies": {
+    "markdown-it-inline-annotation": "file:../markdown-it-inline-annotation"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^13.0.0",
+    "@types/node": "^20.0.0",
+    "markdown-it": "^14.0.0",
+    "typescript": "^5.0.0"
+  }
+}
