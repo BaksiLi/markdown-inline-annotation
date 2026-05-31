@@ -29,7 +29,7 @@ sibling `../markdown-it-inline-annotation` build and shared fixture corpus
 without publishing a package first.
 
 Before publishing this extension, publish `markdown-it-inline-annotation`
-`0.2.0` or newer and run the normal install/test path.
+`0.3.0` or newer and run the normal install/test path.
 
 ## Safety Model
 

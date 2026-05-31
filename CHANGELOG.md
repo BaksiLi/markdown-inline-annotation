@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Track `markdown-it-inline-annotation@0.3.0`.
+- Validate the preview adapter against the shared source-range fixture corpus,
+  including extra pipe overflow behavior.
+
 ## 0.2.0
 
 - Track Inline Annotation v2 via `markdown-it-inline-annotation@0.2.0`.
