@@ -5,6 +5,8 @@
 - Track `markdown-it-inline-annotation@0.3.1`.
 - Keep the adapter thin: preview rendering continues to come from the shared
   markdown-it plugin and fixture corpus.
+- Teach the preview test runner to honor fixture taxonomy and skip cases that
+  cannot run with adapter defaults.
 
 ## 0.3.0
 

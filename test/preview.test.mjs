@@ -12,13 +12,27 @@ function renderInline(input) {
   return md.render(input).trim().replace(/^<p>/, "").replace(/<\/p>$/, "");
 }
 
+function canRunWithAdapterDefaults(fixture) {
+  if (fixture.assertionType === "host-skip") return false;
+  if (!fixture.options) return true;
+  return fixture.options.spaceAlignment === "always";
+}
+
 assert.equal(typeof extension.activate().extendMarkdownIt, "function");
+assert.deepEqual(Object.keys(fixtureCorpus.fixtureTypes).sort(), ["host-skip", "rendering-policy", "semantic"]);
 
 const directHtml = new MarkdownIt().use(inlineAnnotationPlugin).render("[漢字]^^(かんじ)");
 const extensionHtml = extension.activate().extendMarkdownIt(new MarkdownIt()).render("[漢字]^^(かんじ)");
 assert.equal(extensionHtml, directHtml);
 
+let sharedFixturesRun = 0;
+let sharedFixturesSkipped = 0;
 for (const fixture of fixtureCorpus.cases) {
+  if (!canRunWithAdapterDefaults(fixture)) {
+    sharedFixturesSkipped++;
+    continue;
+  }
+  sharedFixturesRun++;
   const html = renderInline(fixture.input);
   for (const part of fixture.contains ?? []) {
     assert.ok(html.includes(part), `${fixture.id} missing ${part} in ${html}`);
@@ -35,4 +49,4 @@ for (const fixture of fixtureCorpus.cases) {
   }
 }
 
-console.log(`VS Code preview adapter: ${fixtureCorpus.cases.length} shared fixtures passed`);
+console.log(`VS Code preview adapter: ${sharedFixturesRun} shared fixtures passed, ${sharedFixturesSkipped} shared fixtures skipped`);
