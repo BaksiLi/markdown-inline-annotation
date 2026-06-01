@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Track `markdown-it-inline-annotation@0.3.1`.
+- Keep the adapter thin: preview rendering continues to come from the shared
+  markdown-it plugin and fixture corpus.
+
 ## 0.3.0
 
 - Track `markdown-it-inline-annotation@0.3.0`.
