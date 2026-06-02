@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Track `markdown-it-inline-annotation@0.3.2`.
+- Preserve independent overline/underline styles for chained line marks in
+  Markdown preview.
+
 ## 0.3.1
 
 - Track `markdown-it-inline-annotation@0.3.1`.
