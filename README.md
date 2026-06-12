@@ -1,9 +1,17 @@
-# Inline Annotation for VS Code
+# Inline Ruby Annotation for VS Code
 
-Preview-only VS Code adapter for Inline Annotation.
+Preview-only VS Code adapter for `[base]^^(ruby)` Inline Annotation syntax:
+ruby/furigana, interlinear glosses, bouten emphasis dots, overlines, and
+underlines.
 
 This extension uses VS Code's built-in Markdown preview hook and installs the
 standard `markdown-it-inline-annotation` plugin through `extendMarkdownIt`.
+
+Part of the Inline Annotation ecosystem:
+
+- **Spec and core:** [`markdown-it-inline-annotation`](https://github.com/BaksiLi/markdown-it-inline-annotation)
+- **Obsidian adapter:** [Inline Ruby Annotation](https://community.obsidian.md/plugins/inline-annotation)
+- **Logseq reference plugin:** [`logseq-furigana-ruby`](https://github.com/BaksiLi/logseq-furigana-ruby)
 
 ## Scope
 
