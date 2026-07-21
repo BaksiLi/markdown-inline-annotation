@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Validate all shared segment-boundary cases as contiguous Markdown source,
+  documenting that rich-text run policy belongs to DOM/rich-text adapters.
+- Track `markdown-it-inline-annotation@0.3.3`.
+
 ## 0.3.2
 
 - Track `markdown-it-inline-annotation@0.3.2`.

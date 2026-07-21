@@ -6,6 +6,7 @@ import inlineAnnotationPlugin from "markdown-it-inline-annotation";
 const require = createRequire(import.meta.url);
 const extension = require("../dist/extension.js");
 const fixtureCorpus = require("markdown-it-inline-annotation/fixtures/html-render.json");
+const segmentBoundaryCorpus = require("./segment-boundaries.json");
 
 function renderInline(input) {
   const md = extension.activate().extendMarkdownIt(new MarkdownIt());
@@ -49,4 +50,16 @@ for (const fixture of fixtureCorpus.cases) {
   }
 }
 
-console.log(`VS Code preview adapter: ${sharedFixturesRun} shared fixtures passed, ${sharedFixturesSkipped} shared fixtures skipped`);
+for (const fixture of segmentBoundaryCorpus.cases) {
+  const source = fixture.runs.map((run) => run.text).join("");
+  const html = renderInline(source);
+  assert.ok(
+    html.includes("ia-ruby"),
+    `${fixture.id} should render when VS Code provides one contiguous Markdown source segment`
+  );
+}
+
+console.log(
+  `VS Code preview adapter: ${sharedFixturesRun} render fixtures passed, ` +
+    `${sharedFixturesSkipped} skipped, ${segmentBoundaryCorpus.cases.length} contiguous-source boundary fixtures passed`
+);

@@ -1,49 +1,62 @@
 # Inline Ruby Annotation for VS Code
 
-Preview-only VS Code adapter for `[base]^^(ruby)` Inline Annotation syntax:
-ruby/furigana, interlinear glosses, bouten emphasis dots, overlines, and
-underlines.
+Preview Inline Annotation syntax as ruby/furigana, over/under glosses, bouten,
+overlines, and underlines in VS Code's built-in Markdown preview.
 
-This extension uses VS Code's built-in Markdown preview hook and installs the
-standard `markdown-it-inline-annotation` plugin through `extendMarkdownIt`.
+```markdown
+[漢字]^^(かんじ)
+[base]^^(over)^_(under)
+[重要]^^(..)^_(.~)
+```
 
-Part of the Inline Annotation ecosystem:
-
-- **Spec and core:** [`markdown-it-inline-annotation`](https://github.com/BaksiLi/markdown-it-inline-annotation)
-- **Obsidian adapter:** [Inline Ruby Annotation](https://community.obsidian.md/plugins/inline-annotation)
-- **Logseq reference plugin:** [`logseq-furigana-ruby`](https://github.com/BaksiLi/logseq-furigana-ruby)
+The extension is a thin adapter: it installs
+[`markdown-it-inline-annotation`](https://github.com/BaksiLi/markdown-it-inline-annotation)
+through VS Code's `extendMarkdownIt` hook.
 
 ## Scope
 
-- Markdown preview rendering: yes
-- Markdown source editing behavior: no
-- hover, diagnostics, completion, and code actions: no
-- preview scripts: no
-- external resources: no
+| Feature | Support |
+| --- | --- |
+| Built-in Markdown preview | yes |
+| Source editor decorations | no |
+| Hover, diagnostics, completion, code actions | no |
+| Preview scripts or external resources | none |
 
-The first version is intentionally only a Markdown preview adapter. It proves
-that Inline Annotation can travel as ordinary Markdown syntax without depending
-on a host-specific browser script.
+VS Code provides one contiguous Markdown source stream, so rich-text run
+boundaries do not apply here. Markdown-owned constructs such as escapes,
+emphasis, strikethrough, links, code, HTML, and entities remain under
+markdown-it's rules.
 
 ## Development
 
 ```sh
 npm install
-npm test
+npm run check
 ```
 
-Inside this workspace, `npm run check:local` verifies the adapter against the
-sibling `../markdown-it-inline-annotation` build and shared fixture corpus
-without publishing a package first.
+Inside the sibling-repo workspace, verify the adapter against an unpublished
+core change with:
 
-Before publishing this extension, publish `markdown-it-inline-annotation`
-`0.3.2` or newer and run the normal install/test path.
+```sh
+npm run check:local
+```
 
-## Safety Model
+The test suite runs the shared renderer corpus and the contiguous-source side
+of the segment-boundary fixtures. Before publishing, update the lockfile to the
+released core version and run the normal `npm run check` path again.
 
-The adapter does not inject preview scripts. User-authored base and annotation
-text is escaped by `markdown-it-inline-annotation` before generated HTML is
-returned to VS Code's Markdown preview.
+## Ecosystem
 
-Keep editor-side features out of this package until preview rendering has real
-usage feedback.
+- [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-it-inline-annotation)
+- [Inline Ruby Annotation for Obsidian](https://community.obsidian.md/plugins/inline-annotation)
+- [Logseq reference plugin](https://github.com/BaksiLi/logseq-furigana-ruby)
+- [Original proposal](https://blog.baksili.codes/markdown-ruby)
+
+## Safety
+
+The adapter injects no preview scripts. The shared renderer escapes
+user-authored text before returning HTML to VS Code.
+
+## License
+
+MIT
