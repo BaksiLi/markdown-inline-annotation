@@ -98,6 +98,15 @@ test("avoids collisions with marker-looking source text", () => {
   assert.ok(html.includes("<rt>ann</rt>"));
 });
 
+test("normalizes Satteri positions before slicing JavaScript source", () => {
+  const source = "😀 first paragraph\n\n🧠 prefix [漢字]^^(かんじ) suffix";
+  const html = render(source);
+  assert.ok(html.includes("😀 first paragraph"));
+  assert.ok(html.includes("🧠 prefix <ruby"));
+  assert.ok(html.includes("<rt>かんじ</rt>"));
+  assert.ok(html.includes("</ruby> suffix"));
+});
+
 test("leaves MDX unchanged until literal inserted-HTML semantics are available", () => {
   const source = "Before [x]^^({danger}) after";
   const preset = satteriInlineAnnotation();

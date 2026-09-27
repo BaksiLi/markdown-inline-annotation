@@ -59,6 +59,10 @@ interface CompileState {
   markerPrefix: string;
   nextMarkerId: number;
   htmlByMarker: Map<string, string>;
+  jsIndexBySourceOffset: number[];
+  lineStartJsIndexes: number[];
+  source: string;
+  sourceOffsetEncoding: "utf8" | "utf16" | undefined;
 }
 
 export interface SatteriInlineAnnotationPreset {
@@ -71,25 +75,75 @@ function childrenOf(node: Readonly<MdastNode>): readonly MdastNode[] {
   return node.children as readonly MdastNode[];
 }
 
-function sourceRangeOf(node: Readonly<MdastNode>): SourceRange | null {
-  const start = node.position?.start.offset;
-  const end = node.position?.end.offset;
-  if (start === undefined || end === undefined) return null;
-  return { start, end };
+interface SourcePoint {
+  offset: number;
+  line: number;
+  column: number;
+}
+
+function jsIndexAtScalarColumn(source: string, lineStart: number, columnOffset: number): number {
+  let index = lineStart;
+  let characters = 0;
+  while (index < source.length && source[index] !== "\n" && characters < columnOffset) {
+    const codePoint = source.codePointAt(index) ?? 0;
+    index += codePoint > 0xffff ? 2 : 1;
+    characters++;
+  }
+  return index;
+}
+
+function jsIndexForPoint(point: SourcePoint, state: CompileState): number {
+  const lineStart = state.lineStartJsIndexes[point.line - 1] ?? 0;
+  const utf16PointIndex = lineStart + point.column - 1;
+  const utf8PointIndex = jsIndexAtScalarColumn(state.source, lineStart, point.column - 1);
+  const mappedSourceOffset = state.jsIndexBySourceOffset[point.offset];
+  const matchesUtf16 = point.offset === utf16PointIndex;
+  const matchesUtf8 = mappedSourceOffset === utf8PointIndex;
+
+  if (!state.sourceOffsetEncoding) {
+    if (matchesUtf16 && !matchesUtf8) state.sourceOffsetEncoding = "utf16";
+    if (matchesUtf8 && !matchesUtf16) state.sourceOffsetEncoding = "utf8";
+  }
+
+  if (state.sourceOffsetEncoding === "utf8") return mappedSourceOffset ?? utf8PointIndex;
+  if (state.sourceOffsetEncoding === "utf16") return point.offset;
+  if (mappedSourceOffset === point.offset) return point.offset;
+  if (matchesUtf8) return mappedSourceOffset;
+  return point.offset;
+}
+
+function sourceRangeOf(node: Readonly<MdastNode>, state: CompileState): SourceRange | null {
+  const start = node.position?.start;
+  const end = node.position?.end;
+  if (
+    start?.offset === undefined ||
+    start.line === undefined ||
+    start.column === undefined ||
+    end?.offset === undefined ||
+    end.line === undefined ||
+    end.column === undefined
+  ) {
+    return null;
+  }
+  return {
+    start: jsIndexForPoint({ offset: start.offset, line: start.line, column: start.column }, state),
+    end: jsIndexForPoint({ offset: end.offset, line: end.line, column: end.column }, state),
+  };
 }
 
 function collectHostOwnedRanges(
   node: Readonly<MdastNode>,
   ranges: SourceRange[],
-  htmlTokens: HtmlToken[]
+  htmlTokens: HtmlToken[],
+  state: CompileState
 ): void {
   for (const child of childrenOf(node)) {
-    const range = sourceRangeOf(child);
+    const range = sourceRangeOf(child, state);
     if (range && HOST_OWNED_NODE_TYPES.has(child.type)) {
       ranges.push(range);
       if (child.type === "html") htmlTokens.push({ ...range, value: child.value });
     }
-    collectHostOwnedRanges(child, ranges, htmlTokens);
+    collectHostOwnedRanges(child, ranges, htmlTokens, state);
   }
 }
 
@@ -142,10 +196,30 @@ function isBlockedByHostRange(model: SourceRange, hostRange: SourceRange): boole
 function createCompileState(source: string): CompileState {
   let markerPrefix = INITIAL_MARKER_PREFIX;
   while (source.includes(markerPrefix)) markerPrefix = `\uE000${markerPrefix}`;
+
+  // Satteri 0.9 position-enabled visitors expose UTF-8 byte offsets, while
+  // 0.10 exposes JavaScript UTF-16 offsets. Keep both maps and use line/column
+  // consistency to select the correct interpretation for this compile.
+  const jsIndexBySourceOffset: number[] = [0];
+  const lineStartJsIndexes = [0];
+  let jsIndex = 0;
+  let sourceOffset = 0;
+  for (const character of source) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    sourceOffset += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+    jsIndex += character.length;
+    jsIndexBySourceOffset[sourceOffset] = jsIndex;
+    if (character === "\n") lineStartJsIndexes.push(jsIndex);
+  }
+
   return {
     markerPrefix,
     nextMarkerId: 0,
     htmlByMarker: new Map(),
+    jsIndexBySourceOffset,
+    lineStartJsIndexes,
+    source,
+    sourceOffsetEncoding: undefined,
   };
 }
 
@@ -177,7 +251,8 @@ function replaceAnnotationsInParent(
   // expressions. Preserve MDX until that contract can be made safe.
   if (context.sourceFormat !== "markdown") return undefined;
 
-  const parentRange = sourceRangeOf(node);
+  const state = compileStateFor(context, stateKey);
+  const parentRange = sourceRangeOf(node, state);
   if (!parentRange) return undefined;
 
   const source = context.source.slice(parentRange.start, parentRange.end);
@@ -186,10 +261,9 @@ function replaceAnnotationsInParent(
 
   const hostRanges: SourceRange[] = [];
   const htmlTokens: HtmlToken[] = [];
-  collectHostOwnedRanges(node, hostRanges, htmlTokens);
+  collectHostOwnedRanges(node, hostRanges, htmlTokens, state);
   hostRanges.push(...collectRawHtmlIslands(htmlTokens));
 
-  const state = compileStateFor(context, stateKey);
   let cursor = 0;
   let transformed = "";
   let replacements = 0;
