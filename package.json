@@ -33,7 +33,7 @@
   "author": "Baksi Li",
   "license": "MIT",
   "dependencies": {
-    "markdown-it-inline-annotation": "^0.3.3"
+    "markdown-it-inline-annotation": "^0.4.0"
   },
   "peerDependencies": {
     "satteri": ">=0.9.5 <1"
