@@ -45,6 +45,17 @@ The test suite runs the shared renderer corpus and the contiguous-source side
 of the segment-boundary fixtures. Before publishing, update the lockfile to the
 released core version and run the normal `npm run check` path again.
 
+Pushing a `v<package-version>` tag runs the checks, packages the extension with
+its core dependency, and uploads the VSIX to GitHub.
+The Release workflow can be dispatched on the same tag to retry it.
+Marketplace publishing also runs when repository variables `AZURE_CLIENT_ID`
+and `AZURE_TENANT_ID` identify a federated Microsoft Entra application with
+access to the `baksili` publisher.
+Without that setup, the workflow explicitly reports that only the GitHub VSIX
+was released.
+See the [VS Code publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+for the publisher and federation setup.
+
 ## Ecosystem
 
 - [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-it-inline-annotation)

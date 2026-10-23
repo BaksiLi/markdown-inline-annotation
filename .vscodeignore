@@ -1,4 +1,5 @@
 src/**
+.github/**
 test/**
 scripts/**
 tsconfig.json
