@@ -1,7 +1,7 @@
 # Monorepo migration
 
 The unified repository is `BaksiLi/markdown-inline-annotation`. Syntax stays v2.
-All products use the 0.8.1 release line; public package and plugin identities are unchanged.
+All products use the 0.8.2 release line; public package and plugin identities are unchanged.
 Sätteri remains an unpublished pilot.
 
 ## Repository continuity
@@ -14,8 +14,8 @@ repository without replacing its history.
 
 The short-lived new repository is retained as
 `BaksiLi/markdown-inline-annotation-migration`, a migration snapshot rather than
-a second development home. Its 0.8.0 release attempt remained an unpublished draft;
-0.8.1 is the first unified release.
+a second development home. The 0.8.0 and 0.8.1 release attempts remained
+unpublished drafts; 0.8.2 is the first unified release.
 
 ## History
 

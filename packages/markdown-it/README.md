@@ -1,5 +1,3 @@
-> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `packages/markdown-it`. Run workspace commands from the repository root; see the [root guide](../../README.md).
-
 # markdown-it-inline-annotation
 
 Reference parser, HTML renderer, and `markdown-it` adapter for **Inline
@@ -76,7 +74,7 @@ Space-separated readings can align per character:
 [春夏秋冬]^^(はる なつ あき ふゆ)
 ```
 
-See [SPEC.md](./SPEC.md) for the complete grammar, escapes, overflow behavior,
+See [SPEC.md](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md) for the complete grammar, escapes, overflow behavior,
 class contract, and host-boundary requirements.
 
 Annotation parentheses must balance; use `\(` or `\)` for standalone literal

@@ -14,20 +14,25 @@ const save = () => fs.writeFileSync(process.env.RELEASE_TEST_STATE, JSON.stringi
 if (args[0] === "api" && args.includes("--slurp")) {
   save();
   if (state.lookupFails) { console.error("HTTP 403"); process.exit(1); }
-  process.stdout.write(JSON.stringify([state.release ? [state.release] : []]));
-} else if (args[0] === "release" && args[1] === "create") {
-  state.release = { tag_name: args[2], draft: true, assets: [] };
+  process.stdout.write(JSON.stringify([state.release && !state.hideCreatedRelease ? [state.release] : []]));
+} else if (args[0] === "api" && args[1].includes("/git/ref/tags/")) {
   save();
-} else if (args[0] === "release" && args[1] === "upload") {
-  const path = args[3];
-  const name = require("node:path").basename(path);
+  process.stdout.write(JSON.stringify({ ref: "refs/tags/0.8.1" }));
+} else if (args.includes("POST") && args.some(x => x.endsWith("/releases"))) {
+  const body = JSON.parse(fs.readFileSync(0, "utf8"));
+  state.release = { id: 123, tag_name: body.tag_name, draft: body.draft, assets: [] };
+  save();
+  process.stdout.write(JSON.stringify(state.release));
+} else if (args.includes("POST") && args.some(x => x.startsWith("https://uploads.github.com/"))) {
+  const path = args[args.indexOf("--input") + 1];
+  const name = new URL(args.find(x => x.startsWith("https://"))).searchParams.get("name");
   state.release.assets.push({ id: name, name });
   state.bytes[name] = fs.readFileSync(path).toString("base64");
   save();
 } else if (args[0] === "api" && args[1].includes("/releases/assets/")) {
   save();
   process.stdout.write(Buffer.from(state.bytes[args[1].split("/").pop()], "base64"));
-} else if (args[0] === "release" && args[1] === "edit") {
+} else if (args.includes("PATCH")) {
   state.release.draft = false;
   save();
 } else {
@@ -47,6 +52,7 @@ function fixture(t, overrides = {}) {
     copyFileSync(new URL(name, import.meta.url), resolve(directory, "scripts", name));
   }
   writeFileSync(resolve(directory, "package.json"), '{"version":"0.8.1"}');
+  writeFileSync(resolve(directory, "RELEASE_NOTES.md"), "Release notes\\n");
   writeFileSync(resolve(directory, "artifacts", "SHA256SUMS"), "verified checksum\n");
   writeFileSync(resolve(directory, "artifacts", "main.js"), "verified build\n");
   writeFileSync(resolve(directory, "bin", "gh"), fakeGh, { mode: 0o755 });
@@ -78,15 +84,25 @@ test("creates and finds a draft, uploads assets, and safely retries a published 
   assert.equal(before.release.assets.length, 2);
   const second = f.publish();
   assert.equal(second.status, 0, second.stderr);
-  const uploads = (state) => state.calls.filter((args) => args[1] === "upload").length;
+  const uploads = (state) => state.calls.filter((args) =>
+    args.some((arg) => arg.startsWith("https://uploads.github.com/"))).length;
   assert.equal(uploads(f.read()), uploads(before));
 });
 
 test("resumes an existing draft without creating another release", (t) => {
-  const f = fixture(t, { release: { tag_name: "0.8.1", draft: true, assets: [] } });
+  const f = fixture(t, { release: { id: 123, tag_name: "0.8.1", draft: true, assets: [] } });
   const result = f.publish();
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(f.read().calls.some((args) => args[1] === "create"), false);
+  assert.equal(f.read().calls.some((args) =>
+    args.includes("POST") && args.some((arg) => arg.endsWith("/releases"))), false);
+});
+
+test("publishes using the creation response when a new draft is not discoverable yet", (t) => {
+  const f = fixture(t, { hideCreatedRelease: true });
+  const result = f.publish();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.read().calls.filter((args) => args.includes("--slurp")).length, 1);
+  assert.equal(f.read().release.draft, false);
 });
 
 test("refuses to replace an asset with different bytes", (t) => {
@@ -99,21 +115,21 @@ test("refuses to replace an asset with different bytes", (t) => {
   const result = f.publish();
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /differs/);
-  assert.equal(f.read().calls.some((args) => ["upload", "edit"].includes(args[1])), false);
+  assert.equal(f.read().calls.some((args) => args.includes("POST") || args.includes("PATCH")), false);
 });
 
 test("fails closed on authentication errors instead of creating a release", (t) => {
   const f = fixture(t, { lookupFails: true });
   assert.notEqual(f.publish().status, 0);
-  assert.equal(f.read().calls.some((args) => args[0] === "release"), false);
+  assert.equal(f.read().calls.some((args) => args.includes("POST") || args.includes("PATCH")), false);
 });
 
 test("refuses to publish a release containing an unexpected ZIP", (t) => {
   const f = fixture(t, {
-    release: { tag_name: "0.8.1", draft: true, assets: [{ id: 1, name: "wrong.zip" }] },
+    release: { id: 123, tag_name: "0.8.1", draft: true, assets: [{ id: 1, name: "wrong.zip" }] },
   });
   const result = f.publish();
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /unexpected assets/);
-  assert.equal(f.read().calls.some((args) => args[1] === "edit"), false);
+  assert.equal(f.read().calls.some((args) => args.includes("PATCH")), false);
 });

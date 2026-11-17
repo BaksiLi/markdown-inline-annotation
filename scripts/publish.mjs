@@ -22,11 +22,22 @@ function findRelease() {
 }
 let release = findRelease();
 if (!release) {
-  run("gh", ["release", "create", version, "--repo", repo, "--verify-tag", "--draft",
-    "--title", `Inline Annotation ${version}`, "--notes-file", "RELEASE_NOTES.md"]);
-  release = findRelease();
+  const tag = JSON.parse(capture("gh", ["api", `repos/${repo}/git/ref/tags/${version}`]));
+  assert.equal(tag.ref, `refs/tags/${version}`, "Release tag must already exist");
+  // Use the creation response directly: a new draft may not appear in lookups yet.
+  release = JSON.parse(capture("gh",
+    ["api", "--method", "POST", `repos/${repo}/releases`, "--input", "-"], {
+      input: JSON.stringify({
+        tag_name: version,
+        name: `Inline Annotation ${version}`,
+        body: readFileSync(resolve(root, "RELEASE_NOTES.md"), "utf8"),
+        draft: true,
+      }),
+    }));
 }
 assert.ok(release, `Cannot locate release ${version} after creation`);
+assert.equal(release.tag_name, version);
+assert.ok(Number.isSafeInteger(release.id), "Release must have a numeric ID");
 assert.deepEqual(release.assets.map((asset) => asset.name).filter((name) => !names.includes(name)),
   [], "Release contains unexpected assets; refusing to publish an ambiguous bundle");
 for (const name of names) {
@@ -40,7 +51,10 @@ for (const name of names) {
     assert.equal(createHash("sha256").update(remote.stdout).digest("hex"), expected,
       `Published ${name} differs; bump the version instead of replacing it`);
   } else {
-    run("gh", ["release", "upload", version, path, "--repo", repo]);
+    run("gh", ["api", "--method", "POST",
+      `https://uploads.github.com/repos/${repo}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`,
+      "-H", "Content-Type: application/octet-stream", "--input", path]);
   }
 }
-run("gh", ["release", "edit", version, "--repo", repo, "--draft=false", "--latest"]);
+run("gh", ["api", "--method", "PATCH", `repos/${repo}/releases/${release.id}`,
+  "-F", "draft=false", "-f", "make_latest=true", "--silent"]);

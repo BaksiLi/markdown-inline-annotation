@@ -1,33 +1,121 @@
-# Inline Annotation
+# Inline Annotation for Markdown
 
-A Markdown syntax for ruby, furigana, bouten, line marks, and two-slot annotations.
-The specification, parser, shared conformance corpus, and editor integrations live here.
+Inline Annotation is a small Markdown extension for ruby/furigana, phonetic
+guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 
 ```markdown
 [漢字]^^(かんじ)
-[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)
-[（半）形式的產物]^^((semi-)formal artefact)
+[base]^^(over)^_(under)
+[重要]^^(..)^_(.~)
 ```
 
-The syntax is **v2**. Product versions follow one release line, currently **0.8.1**.
+It implements the syntax proposed by Baksi Li in
+[Ruby (Furigana) Syntax in Markdown](https://blog.baksili.codes/markdown-ruby).
+The original Logseq implementation grew into a shared syntax, reference parser,
+and integrations for markdown-it, Obsidian, VS Code, and Logseq.
 
-This is the continuation of the original Obsidian Inline Annotation repository,
-expanded into a shared home for the specification and every integration.
-Existing Obsidian releases and the repository's community history are preserved.
+<img src="./plugins/logseq/assets/logseq_showcase.png" alt="Inline Annotation in Logseq: Markdown source beside rendered furigana, phonetic glosses above and below, bouten, underlines, per-character readings, and nested ruby." width="560">
 
-## Specification and integrations
+*The original Logseq showcase. See the [Logseq guide](plugins/logseq/) for
+host-specific behavior and copyable examples.*
 
-- [Specification](SPEC.md) and [shared fixtures](fixtures/).
-- [Parser, dependency-free core, and markdown-it plugin](packages/markdown-it/).
-- [Logseq plugin](plugins/logseq/) — marketplace ID `logseq-furigana-ruby`.
-- [Obsidian plugin](plugins/obsidian/) — plugin ID `inline-annotation`.
-- [VS Code extension](plugins/vscode/) — `baksili.vscode-inline-annotation`.
-- [Sätteri adapter](packages/satteri/) — pilot, not published to npm.
-- [Adapter contract and compatibility](docs/ADAPTERS.md).
+The syntax is **v2**. The [specification](SPEC.md) defines its grammar, escaping,
+source ranges, and rendering contract; the [shared fixtures](fixtures/) keep
+implementations aligned. This is a proposal with working implementations.
 
-The npm package remains `markdown-it-inline-annotation`. Its `/core`, fixture, stylesheet,
-CommonJS, ES module, and type exports are preserved. No package reinstall or plugin-ID
-migration is needed solely because the source repositories moved.
+## Ports and implementations
+
+| Project | Where to get it | Integration |
+| --- | --- | --- |
+| `markdown-it-inline-annotation` | [npm](https://www.npmjs.com/package/markdown-it-inline-annotation) · [guide](packages/markdown-it/) | Reference parser/model, HTML renderer, and markdown-it plugin |
+| Inline Ruby Annotation for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
+| Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
+| `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
+| `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
+| remark/unified | Not implemented | Deferred until a concrete AST pipeline needs it |
+
+## Install
+
+For markdown-it, install the host parser and adapter:
+
+```sh
+npm install markdown-it markdown-it-inline-annotation
+```
+
+```js
+const MarkdownIt = require("markdown-it");
+const { inlineAnnotationPlugin } = require("markdown-it-inline-annotation");
+
+const md = new MarkdownIt().use(inlineAnnotationPlugin);
+md.render("[漢字]^^(かんじ)");
+```
+
+For a parser/model and HTML renderer without markdown-it:
+
+```sh
+npm install markdown-it-inline-annotation
+```
+
+```js
+const {
+  findInlineAnnotationModels,
+  renderInlineAnnotationsToHtml,
+} = require("markdown-it-inline-annotation/core");
+
+const models = findInlineAnnotationModels("[漢字]^^(かんじ)");
+const html = renderInlineAnnotationsToHtml("[漢字]^^(かんじ)");
+```
+
+`markdown-it` is an optional peer dependency. Core-only consumers do not need
+to install it. See the [package guide](packages/markdown-it/) for options,
+stylesheet imports, CommonJS/ES module exports, and model APIs.
+
+## Supported syntax
+
+| Input | Meaning |
+| --- | --- |
+| `[base]^^(ruby)` | Annotation above |
+| `[base]^_(gloss)` | Annotation below |
+| `base^^(ruby)` | Abbreviated single-token base |
+| `[base]^^(over\|under)` | Two-slot annotation |
+| `[base]^^(over)^_(under)` | Chained two-slot annotation |
+| `[[護]^^(まも)れ]^_(プロテゴ)` | Nested or overlapping annotation |
+| `[漢字]^^(..)` | Bouten / emphasis dots above |
+| `[base]^_(.-)` | Solid underline |
+| `[base]^_(.~)` | Wavy underline |
+| `[base]^_(.=)` | Double underline |
+| `[title]^^(.-)` | Solid overline |
+| `[artefact]^^((semi-)formal artefact)` | Balanced parentheses inside a gloss |
+
+Space-separated readings can align per character:
+
+```markdown
+[春夏秋冬]^^(はる なつ あき ふゆ)
+```
+
+Annotation parentheses must balance; use `\(` or `\)` for standalone literal
+parentheses. See [the v2 specification](SPEC.md) for the complete grammar and
+compatibility notes, including migration from the earlier first-close rule.
+
+The [playground](packages/markdown-it/examples/playground.html) and
+[before/after page](packages/markdown-it/examples/before-after.html) are
+standalone HTML examples. Download or open them locally to try the core.
+
+## Design and compatibility
+
+Inline Annotation is meant to be a small cross-editor syntax. Its stable
+surface is the source syntax, two-slot model, escaping rules, rendering marks,
+and compatibility fixtures. HTML is the first renderer.
+
+The core parses contiguous source strings and exposes UTF-16 source ranges.
+Host adapters decide where parsing is allowed and preserve host-owned links,
+code, and semantic formatting boundaries.
+
+Logseq's highlight parsing can conflict with multiple `^^()` expressions in
+one block; its macros and conversion commands handle those cases. Obsidian
+Reading view sees rendered DOM, while Live Preview works on editor source
+ranges. These boundaries are documented in the integration guides and
+[adapter contract](docs/ADAPTERS.md).
 
 ## Develop
 
@@ -58,8 +146,9 @@ npm run release:prepare -- patch
 npm run check
 npm run release:pack
 # Review and commit the version, lockfile, and RELEASE_NOTES.md.
-git tag 0.8.1
-git push origin main 0.8.1
+release_version=$(node -p 'require("./package.json").version')
+git tag "$release_version"
+git push origin main "$release_version"
 ```
 
 Use the version printed by `release:prepare` as the **bare semver tag**. One tagged workflow
@@ -78,10 +167,19 @@ an already published version. Changed content requires a new version.
 
 ## Repository migration
 
-All five original histories are retained as ancestors. Old tags are namespaced under
-`history/<integration>/...`; [migration details](docs/MIGRATION.md) record the source commits
-and update-channel handover. The old repositories retain their historical releases and
-receive migration notices. Plugin update endpoints remain active until their directory
-entries have moved. Use `npm run release:status` to inspect the live handover state.
+This is the original **Obsidian Inline Annotation repository**, renamed and
+expanded into the shared project. Its repository identity, stars, community
+history, original tags, and published Obsidian releases are preserved.
 
-[MIT license](LICENSE).
+All five original Git histories remain as ancestors. Other historical tags
+are retained under `history/<integration>/...`. Existing npm package names,
+plugin IDs, and documented core exports remain unchanged. Older update
+endpoints stay available during the directory handover.
+
+See [migration details](docs/MIGRATION.md), [the roadmap](docs/ROADMAP.md), and
+[v2 design rationale](docs/v2-rationale.md). Run `npm run release:status` to
+inspect the live handover state.
+
+## License
+
+MIT — Baksi Li. See [LICENSE](LICENSE).

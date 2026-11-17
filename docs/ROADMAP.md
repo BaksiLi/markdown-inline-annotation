@@ -7,17 +7,17 @@ host adapters.
 
 ## Current Implementations
 
-| Project | Role | Current line |
+| Project | Role | Workspace |
 | --- | --- | --- |
-| `markdown-it-inline-annotation` | canonical spec, parser/model, HTML renderer, markdown-it adapter | `0.4.0` |
-| `logseq-furigana-ruby` | independent parser, macros, conversions, Logseq renderer | `0.7.0` |
-| `obsidian-inline-annotation` | Reading view and Live Preview | `0.4.0` |
-| `vscode-inline-annotation` | thin built-in Markdown preview adapter | `0.4.0` |
-| `satteri-inline-annotation` | two-phase Sätteri Markdown adapter | local `0.1.0` pilot |
+| `markdown-it-inline-annotation` | parser/model, HTML renderer, markdown-it adapter | `packages/markdown-it` |
+| `logseq-furigana-ruby` | independent parser, macros, conversions, Logseq renderer | `plugins/logseq` |
+| `obsidian-inline-annotation` | Reading view and Live Preview | `plugins/obsidian` |
+| `vscode-inline-annotation` | thin built-in Markdown preview adapter | `plugins/vscode` |
+| `satteri-inline-annotation` | two-phase Sätteri Markdown adapter; unpublished pilot | `packages/satteri` |
 | remark/unified | AST adapter | deferred until a real pipeline needs it |
 
-Inline Annotation v2 is implemented across the active adapters. Core `0.3.x`
-adds source ranges and multi-model scanning for editor integrations.
+All workspaces now share one product release version. Syntax remains v2.
+The historical milestones below retain their original package version numbers.
 
 ## Contracts
 

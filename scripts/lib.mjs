@@ -25,7 +25,8 @@ export function run(command, args, options = {}) {
   return result;
 }
 export function capture(command, args, options = {}) {
-  const result = spawnSync(command, args, { cwd: root, encoding: "utf8", ...options });
+  const result = spawnSync(command, args,
+    { cwd: root, encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...options });
   if (result.status !== 0) throw new Error(`${command}: ${result.stderr || result.error}`);
   return result.stdout.trim();
 }
