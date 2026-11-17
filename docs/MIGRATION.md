@@ -55,14 +55,16 @@ need the monorepo's root package to be a Logseq plugin. Its updater merges the c
 marketplace manifest over installed metadata, allowing a directory repository change
 to take effect for existing installations.
 
-For Obsidian, changing the linked repository currently requires a directory admin;
-the [official FAQ](https://docs.obsidian.md/community-directory/faq) directs maintainers
-to `#community-directory` on Discord. This is an administrative repository change,
-not the normal release process. The existing GitHub redirect preserves the old metadata
-and asset URLs. Separately, the public Community directory still showed `0.4.0` on
-November 18, 2026; that listing has not yet been verified at `0.8.2`. The maintainer
-can use **Check for new releases** on the directory entry's management page and inspect
-its review results before asking an admin to change the canonical repository path.
+For Obsidian, the [official FAQ](https://docs.obsidian.md/community-directory/faq)
+directs repository transfers to a directory admin through `#community-directory`
+on Discord. This migration is a same-owner rename of the original repository.
+After the maintainer requested **Check for new releases** on November 18, 2026,
+the management page recognized `baksili/markdown-inline-annotation` and queued the
+`0.8.2` review. Its current-release sidebar still shows `0.4.0`, and the legacy
+`obsidianmd/obsidian-releases` directory JSON still contains the old repository
+name. The GitHub redirect preserves its metadata and asset URLs. Review the
+scan and verify the directory cutover before deciding whether admin assistance
+is necessary; no Discord request has been sent.
 For Logseq, change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
 preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
 
@@ -96,7 +98,7 @@ The [Logseq directory PR](https://github.com/logseq/marketplace/pull/965) change
 only the existing entry's repository field. Keep the old Logseq repository
 available until that PR and the generated catalog have switched over.
 
-For the Obsidian directory admin, the handover request is:
+If Obsidian directory admin assistance is still needed, the prepared request is:
 
 > Please update the existing `inline-annotation` listing from
 > `baksili/obsidian-inline-annotation` to `BaksiLi/markdown-inline-annotation`.
@@ -108,9 +110,9 @@ For the Obsidian directory admin, the handover request is:
 > verified to reach the same current files. Please preserve the existing
 > listing and download history.
 
-The directory request above is prepared for the maintainer to send; it has not
-been sent to Discord. Include the public directory's `0.4.0` version if it still
-has not discovered the public `0.8.2` release after checking from the management page.
+The request above has not been sent. The directory has discovered `0.8.2`, so
+include the pending review and canonical-repository recognition when asking for
+help rather than reporting that release discovery failed.
 
 ### Maintainer handover queue
 
@@ -121,13 +123,38 @@ The maintainer completed both publisher connections on November 18, 2026
 | --- | --- | --- |
 | npm | Public latest is `0.8.2`; the registry tarball is byte-for-byte identical to the original GitHub asset; a fresh registry install passed the core and markdown-it smoke checks | Complete |
 | VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
-| Obsidian directory | The old GitHub URLs reach verified `0.8.2` metadata/assets, but the public Community directory still displays `0.4.0` | Sign in to check for new releases and review results; ask a directory admin to update the canonical repository name |
+| Obsidian directory | Signed-in management recognizes the canonical repository and has a pending `0.8.2` review; its current-release sidebar still shows `0.4.0`, and legacy directory JSON still names the old repository | Resolve review findings, verify the public release and directory cutover, then request admin assistance only if still needed |
 | Logseq directory | PR `logseq/marketplace#965` is open and not a draft; its WIP app still reports an old draft status; the generated catalog still names the old repository | The draft/ready events were retriggered and the documented `@wip ready for review` body marker added; wait for the external check/review and catalog update, verify updates, then archive the old Logseq repository |
 | Old source repositories | Migration notices are present; the temporary migration snapshot, old core, and old VS Code repositories are archived | Archive the old Logseq repository after its update-channel handover is verified |
 
 After the account steps, the release resume command in the root README reuses
 the original public artifacts. The code, packaging, and GitHub release do not
 need to be recreated.
+
+### Obsidian review findings
+
+The pending `0.8.2` review verifies the GitHub attestations for `main.js` and
+`styles.css`. It also scans other workspaces: its unsafe-`innerHTML` errors
+point to `plugins/logseq/src/parser.ts`, and its DOMPurify/lodash dependency
+warnings come from `@logseq/libs@0.0.17`. A local esbuild metafile confirmed
+that Obsidian's bundle contains only its own sources and the shared core; the
+rebuilt file is byte-for-byte identical to the `0.8.2` release artifact. The
+Logseq SDK dependencies are absent from that bundle, but their separate audit
+findings still need remediation.
+
+The review also warns about the root README title, existing CSS compatibility,
+and the non-Obsidian assets in the shared release. It explicitly says the extra
+assets will not be downloaded by Obsidian. Keep the project README and shared
+release identities intact while addressing relevant findings. The official
+directory supports **Review branch** to preview changes before publishing
+another release. Build-verification completion has not yet been observed.
+
+Listing descriptions are being tailored under the existing **Inline Ruby
+Annotation** name and `inline-annotation` ID. The draft has not been saved.
+The name is a display name, not a permanent identifier: the official
+[manifest reference](https://docs.obsidian.md/Reference/Manifest#name) permits
+updating plugin names through `manifest.json`. Any later naming change should
+preserve the existing ID and listing.
 
 Earlier verification on November 18, 2026 (Asia/Taipei):
 [full CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140612552)
