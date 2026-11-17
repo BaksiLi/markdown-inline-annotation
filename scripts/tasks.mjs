@@ -35,5 +35,5 @@ for (const workspace of workspaces) {
     }
   }
 }
-if (task !== "build") run(process.execPath, ["--test", "scripts/publish.test.mjs"]);
+if (task !== "build") run(process.execPath, ["--test", "scripts/publish.test.mjs", "scripts/release-assets.test.mjs"]);
 if (task === "check") run("git", ["diff", "--check"]);

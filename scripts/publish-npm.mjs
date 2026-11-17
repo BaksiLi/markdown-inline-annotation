@@ -5,8 +5,9 @@ import { spawnSync } from "node:child_process";
 import { npm, readJson, root, run } from "./lib.mjs";
 
 const version = readJson("package.json").version;
-assert.equal(process.env.GITHUB_REF_NAME, version);
-assert.equal(process.env.GITHUB_REF_TYPE, "tag");
+const tag = process.env.RELEASE_TAG
+  ?? (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : undefined);
+assert.equal(tag, version, "Release tag must match the shared package version");
 const name = "markdown-it-inline-annotation";
 const archive = `${root}/artifacts/${name}-${version}.tgz`;
 const expected = `sha512-${createHash("sha512").update(readFileSync(archive)).digest("base64")}`;

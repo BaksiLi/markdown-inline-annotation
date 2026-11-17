@@ -158,12 +158,25 @@ Versions are synchronized across workspaces; syntax revisions are specified sepa
 
 GitHub assets, npm, and VS Code Marketplace publish in separate jobs. npm requires a
 trusted publisher for `BaksiLi/markdown-inline-annotation`, workflow `release.yml`.
-Marketplace requires federated publisher access and the repository variables
-`AZURE_CLIENT_ID` and `AZURE_TENANT_ID`; without them, the job explicitly reports that
-Marketplace was not published. The GitHub VSIX is still available.
+Marketplace uses GitHub OIDC with a Trusted Publishing policy on the existing
+`baksili` publisher for the same repository and workflow. Both publishers need
+one-time account setup; no Azure application or stored publishing token is needed.
+Missing authorization fails the relevant publishing job; the GitHub VSIX remains
+available. See the [publisher setup and directory handover](docs/MIGRATION.md#publisher-setup).
 
 Workflow retries verify existing npm integrity and GitHub asset hashes before accepting
 an already published version. Changed content requires a new version.
+
+After fixing publisher authorization, resume the current release from its original
+public assets:
+
+```sh
+gh workflow run release.yml --ref main -f existing_release="$(node -p 'require("./package.json").version')"
+```
+
+This verifies the downloaded files against `SHA256SUMS`, GitHub asset digests, and
+the package metadata, then retries npm and Marketplace. It does not rebuild the
+artifacts or alter the existing GitHub release.
 
 ## Repository migration
 

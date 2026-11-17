@@ -22,6 +22,6 @@
     "release:status": "node scripts/migration-status.mjs"
   },
   "devDependencies": {
-    "@vscode/vsce": "4.0.0"
+    "@vscode/vsce": "4.1.1"
   }
 }

@@ -13,7 +13,7 @@ the same repository. The already prepared monorepo history is merged into that
 repository without replacing its history.
 
 The short-lived new repository is retained as
-`BaksiLi/markdown-inline-annotation-migration`, a migration snapshot rather than
+`BaksiLi/markdown-inline-annotation-migration`, an archived migration snapshot rather than
 a second development home. The 0.8.0 and 0.8.1 release attempts remained
 unpublished drafts; 0.8.2 is the first unified release.
 
@@ -59,6 +59,65 @@ For Obsidian, changing the linked repository currently requires a directory admi
 the official FAQ directs maintainers to `#community-directory` on Discord. For Logseq,
 change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
 preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
+
+## Publisher setup
+
+Both registries can trust this repository's GitHub Actions workflow directly:
+
+| Service | Existing identity | Trusted repository | Workflow |
+| --- | --- | --- | --- |
+| npm | `markdown-it-inline-annotation` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
+| VS Code Marketplace | publisher `baksili` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
+
+For npm, complete `npm login` using the maintainer account, then update the
+package's trusted publisher:
+
+```sh
+npm trust github markdown-it-inline-annotation --file release.yml --repo BaksiLi/markdown-inline-annotation --allow-publish --yes
+```
+
+For Marketplace, open **Manage Publishers**, select the existing `baksili`
+publisher, then add a GitHub policy under **Trusted Publishing** using the
+repository and workflow above. The release job uses `vsce publish --oidc` with
+`id-token: write`. This does not require an Azure app registration, tenant
+variables, or a stored access token. See the official
+[Marketplace publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions)
+and [npm trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/).
+
+The [Logseq directory PR](https://github.com/logseq/marketplace/pull/965) changes
+only the existing entry's repository field. Keep the old Logseq repository
+available until that PR and the generated catalog have switched over.
+
+For the Obsidian directory admin, the handover request is:
+
+> Please update the existing `inline-annotation` listing from
+> `baksili/obsidian-inline-annotation` to `BaksiLi/markdown-inline-annotation`.
+> This is a rename of the same GitHub repository, ID `1254119943`; the plugin
+> ID, original releases, stars, and community history are preserved.
+> Root `manifest.json` and `versions.json` remain available, and release
+> `0.8.2` provides `main.js`, `manifest.json`, and `styles.css` under its
+> matching bare semver tag. The old metadata and download URLs have been
+> verified to reach the same current files. Please preserve the existing
+> listing and download history.
+
+The directory request above is prepared for the maintainer to send; it has not
+been sent to Discord.
+
+### Maintainer handover queue
+
+These account-dependent steps are deferred until the maintainer is available.
+
+| Item | Current evidence | Remaining action |
+| --- | --- | --- |
+| npm | Public latest is `0.4.0`; local account lookup returns `E401`; `0.8.2` is available as a GitHub tarball | Complete maintainer login, change the package's trusted publisher to the monorepo, then resume `0.8.2` |
+| VS Code Marketplace | GitHub provides the `0.8.2` VSIX; Marketplace publication has not completed | Configure the existing `baksili` publisher's GitHub Trusted Publishing policy, then resume the same VSIX |
+| Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
+| Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
+| Old source repositories | Migration notices are present; the temporary migration snapshot is archived | Archive the remaining source repositories after their corresponding publishing or update-channel handover is verified |
+
+After the account steps, the release resume command in the root README reuses
+the original public artifacts. The code, packaging, and GitHub release do not
+need to be recreated.
 
 ## Daily workflow
 

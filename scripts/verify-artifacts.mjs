@@ -4,15 +4,24 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { capture, npm, readJson, root, run } from "./lib.mjs";
+import { releaseAssetNames, verifyReleaseChecksums } from "./release-assets.mjs";
 
 const version = readJson("package.json").version;
 const artifacts = resolve(root, "artifacts");
+const published = process.argv.includes("--published");
+if (published) verifyReleaseChecksums(artifacts, version);
 const tarball = resolve(artifacts, `markdown-it-inline-annotation-${version}.tgz`);
 const logseq = resolve(artifacts, "logseq-furigana-ruby.zip");
 const vsix = resolve(artifacts, `vscode-inline-annotation-${version}.vsix`);
 const unpackJson = (archive, path) => JSON.parse(capture("unzip", ["-p", archive, path]));
+const corePackage = JSON.parse(capture("tar", ["-xOf", tarball, "package/package.json"]));
+assert.equal(corePackage.name, "markdown-it-inline-annotation");
+assert.equal(corePackage.version, version);
+assert.equal(unpackJson(logseq, "package.json").name, "logseq-furigana-ruby");
 assert.equal(unpackJson(logseq, "package.json").version, version);
 assert.equal(unpackJson(logseq, "package.json").logseq.id, "_baksili_logseq-furigana-ruby");
+assert.equal(unpackJson(vsix, "extension/package.json").name, "vscode-inline-annotation");
+assert.equal(unpackJson(vsix, "extension/package.json").publisher, "baksili");
 assert.equal(unpackJson(vsix, "extension/package.json").version, version);
 assert.equal(unpackJson(vsix, "extension/node_modules/markdown-it-inline-annotation/package.json").version, version);
 assert.ok(capture("unzip", ["-p", vsix, "extension/node_modules/markdown-it-inline-annotation/dist/core.js"])
@@ -39,6 +48,10 @@ try {
   rmSync(consumer, { recursive: true, force: true });
 }
 const names = readdirSync(artifacts).filter((name) => name !== "SHA256SUMS").sort();
-writeFileSync(resolve(artifacts, "SHA256SUMS"), names.map((name) =>
-  `${createHash("sha256").update(readFileSync(resolve(artifacts, name))).digest("hex")}  ${name}\n`).join(""));
+assert.deepEqual(names, releaseAssetNames(version).filter((name) => name !== "SHA256SUMS"));
+if (!published) {
+  writeFileSync(resolve(artifacts, "SHA256SUMS"), names.map((name) =>
+    `${createHash("sha256").update(readFileSync(resolve(artifacts, name))).digest("hex")}  ${name}\n`).join(""));
+}
+verifyReleaseChecksums(artifacts, version);
 console.log(`Verified ${version}: standalone npm core, Logseq ZIP, Obsidian assets, and VSIX runtime.`);

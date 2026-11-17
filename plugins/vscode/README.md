@@ -42,9 +42,10 @@ npm run check --workspace plugins/vscode
 The tests run the shared rendering and contiguous-source boundary corpora. The
 root `release:pack` command stages a standalone core runtime and verifies the VSIX.
 All products release together from a bare version tag; see the
-[root release guide](../../README.md#release). Marketplace publishing still needs
-federated Entra publisher access. Without it, GitHub distributes the VSIX and the
-workflow explicitly reports that Marketplace was not published.
+[root release guide](../../README.md#release). Marketplace publishing uses GitHub
+OIDC and a Trusted Publishing policy on the existing `baksili` publisher, naming
+`BaksiLi/markdown-inline-annotation` and `release.yml`. Missing publisher
+authorization fails the publishing job; GitHub still distributes the VSIX.
 
 ## Ecosystem
 

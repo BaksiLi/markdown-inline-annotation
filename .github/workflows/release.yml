@@ -4,13 +4,21 @@ on:
   push:
     tags: ["[0-9]*.[0-9]*.[0-9]*"]
   workflow_dispatch:
+    inputs:
+      existing_release:
+        description: "Resume registry publishing from an existing public release (current shared version)"
+        type: string
+        required: false
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.existing_release || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.existing_release || github.ref_name }}
 
 jobs:
   build:
@@ -27,12 +35,27 @@ jobs:
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-          assert.equal(process.env.GITHUB_REF_TYPE, "tag");
-          assert.equal(process.env.GITHUB_REF_NAME, pkg.version);
+          assert.match(process.env.RELEASE_TAG, /^\d+\.\d+\.\d+$/);
+          assert.equal(process.env.RELEASE_TAG, pkg.version);
+          if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" || !process.env.RESUME_RELEASE) {
+            assert.equal(process.env.GITHUB_REF_TYPE, "tag");
+          }
           NODE
+        env:
+          RESUME_RELEASE: ${{ inputs.existing_release }}
       - run: npm ci
       - run: npm run check
+        if: inputs.existing_release == ''
       - run: npm run release:pack
+        if: inputs.existing_release == ''
+      - name: Download the original public release
+        if: inputs.existing_release != ''
+        run: node scripts/download-release.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Verify the original published artifacts
+        if: inputs.existing_release != ''
+        run: npm run release:verify -- --published
       - uses: actions/upload-artifact@v4
         with:
           name: release
@@ -42,6 +65,7 @@ jobs:
 
   github:
     needs: build
+    if: inputs.existing_release == ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -87,32 +111,18 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    env:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
     steps:
-      - name: Report publisher setup
-        if: env.AZURE_CLIENT_ID == '' || env.AZURE_TENANT_ID == ''
-        run: |
-          echo "::notice::GitHub VSIX is available; Marketplace publishing needs publisher federation."
-          echo "Marketplace: not published. Configure AZURE_CLIENT_ID and AZURE_TENANT_ID and grant publisher access." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
       - uses: actions/setup-node@v4
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
         with:
           node-version: 24
       - uses: actions/download-artifact@v4
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
         with:
           name: release
           path: artifacts
-      - uses: azure/login@v2
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
-        with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
       - name: Publish verified VSIX
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
-        run: npx --yes @vscode/vsce@4.0.0 publish --azure-credential --packagePath artifacts/*.vsix --skip-duplicate
+        run: npx --yes @vscode/vsce@4.1.1 publish --oidc --packagePath artifacts/*.vsix --skip-duplicate
+      - name: Report publishing failure
+        if: failure()
+        run: |
+          echo "Marketplace: not published. Check the failed step and the baksili publisher's Trusted Publishing policy for BaksiLi/markdown-inline-annotation, release.yml." >> "$GITHUB_STEP_SUMMARY"
