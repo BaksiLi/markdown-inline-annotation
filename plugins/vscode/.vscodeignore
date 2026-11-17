@@ -1,0 +1,10 @@
+src/**
+.github/**
+test/**
+scripts/**
+tsconfig.json
+*.log
+.DS_Store
+node_modules/**
+!node_modules/markdown-it-inline-annotation
+!node_modules/markdown-it-inline-annotation/**
