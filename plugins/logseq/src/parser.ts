@@ -39,11 +39,6 @@ function getUnderlineStyle(pattern: string): UnderlineStyle | null {
   return UNDERLINE_STYLES[pattern] ?? null;
 }
 
-function underlineClasses(style: UnderlineStyle): string {
-  if (style === "solid") return "ia-underline";
-  return `ia-underline ia-underline-${style}`;
-}
-
 function lineKeyword(op: RubyOp): "overline" | "underline" {
   return op === "^^" ? "overline" : "underline";
 }
@@ -297,13 +292,6 @@ function splitBySpaces(text: string): string[] {
 }
 
 /**
- * Count actual characters (not bytes) in a string
- */
-function countCharacters(text: string): number {
-  return Array.from(text).length;
-}
-
-/**
  * Check if annotation can be auto-hidden (matches base character)
  */
 function shouldHideAnnotation(baseChar: string, annotation: string): boolean {
@@ -329,8 +317,8 @@ function renderRuby(base: string, op: RubyOp, levels: string[], allowRenderedBas
       let result = "";
       for (let i = 0; i < baseChars.length; i++) {
         const char = baseChars[i];
-        const a1 = ann1Parts![i];
-        const a2 = ann2Parts![i];
+        const a1 = ann1Parts[i];
+        const a2 = ann2Parts[i];
         const hide1 = shouldHideAnnotation(char, a1);
         const hide2 = shouldHideAnnotation(char, a2);
         if (hide1 && hide2) {
@@ -351,7 +339,7 @@ function renderRuby(base: string, op: RubyOp, levels: string[], allowRenderedBas
       let innerRubies = "";
       for (let i = 0; i < baseChars.length; i++) {
         const char = baseChars[i];
-        const ann = ann1Parts![i];
+        const ann = ann1Parts[i];
         if (shouldHideAnnotation(char, ann)) {
           innerRubies += emptyRuby(escapeHtml(char), innerPos);
         } else {
@@ -370,7 +358,7 @@ function renderRuby(base: string, op: RubyOp, levels: string[], allowRenderedBas
       let innerRubies = "";
       for (let i = 0; i < baseChars.length; i++) {
         const char = baseChars[i];
-        const ann = ann2Parts![i];
+        const ann = ann2Parts[i];
         if (shouldHideAnnotation(char, ann)) {
           innerRubies += emptyRuby(escapeHtml(char), outerPos);
         } else {
@@ -585,7 +573,7 @@ function rubyToHTMLPass(input: string, allowRenderedBaseHtml: boolean, extraBoun
       if ((isBouten1 && isLine2) || (isLine1 && isBouten2)) {
         const boutenOp = isBouten1 ? op : op2;
         const lineOp = isLine1 ? op : op2!;
-        const lineStyle = isLine1 ? lineStyle1! : lineStyle2!;
+        const lineStyle = isLine1 ? lineStyle1 : lineStyle2!;
         const comboStyle = [boutenInlineStyle(boutenOp!), lineInlineStyle(lineOp, lineStyle)].join(";");
         out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, lineStyle)}" style="${comboStyle}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
       }
@@ -676,7 +664,7 @@ function rubyToHTMLPass(input: string, allowRenderedBaseHtml: boolean, extraBoun
           } else if ((isInnerBouten || isOuterBouten) && (isInnerLine || isOuterLine)) {
             const boutenOp = isInnerBouten ? innerOp : outerOp;
             const lineOp = isInnerLine ? innerOp : outerOp;
-            const pipeLineStyle = isInnerLine ? innerLineStyle! : outerLineStyle!;
+            const pipeLineStyle = isInnerLine ? innerLineStyle : outerLineStyle!;
             const comboStyle2 = [boutenInlineStyle(boutenOp), lineInlineStyle(lineOp, pipeLineStyle)].join(";");
             out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, pipeLineStyle)}" style="${comboStyle2}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
           } else {
@@ -744,7 +732,7 @@ export function anyToMarkup(content: string): string {
 
   // Macros → markup
   MACRO_RE.lastIndex = 0;
-  result = result.replace(MACRO_RE, (_match, base, ann, pos) => {
+  result = result.replace(MACRO_RE, (_match: string, base: string, ann: string, pos?: string) => {
     const b = (base ?? "").trim();
     const a = (ann ?? "").trim();
     if (!b || !a) return _match;
@@ -944,7 +932,6 @@ function htmlElementsToMacro(root: HTMLElement): void {
 
   for (const span of Array.from(root.querySelectorAll("span.ia-bouten"))) {
     const base = (span.textContent ?? "").trim();
-    const isOver = span.classList.contains("ia-bouten-over");
     const isUnder = span.classList.contains("ia-bouten-under");
     const line = linePatternFromClasses(span);
     
@@ -978,7 +965,7 @@ export function anyToHTML(content: string): string {
 
   // Macros → HTML
   MACRO_RE.lastIndex = 0;
-  result = result.replace(MACRO_RE, (_match, base, ann, pos) => {
+  result = result.replace(MACRO_RE, (_match: string, base: string, ann: string, pos?: string) => {
     const args = [":ruby", base, ann];
     if (pos) args.push(pos);
     return renderMacroRuby(args) ?? _match;
