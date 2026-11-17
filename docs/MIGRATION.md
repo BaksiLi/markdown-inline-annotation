@@ -107,16 +107,16 @@ been sent to Discord.
 
 ### Maintainer handover queue
 
-The maintainer resumed account setup on November 18, 2026 (Asia/Taipei).
-Marketplace publishing is verified; the maintainer is completing the npm connection.
+The maintainer completed both publisher connections on November 18, 2026
+(Asia/Taipei). npm and Marketplace publishing are verified.
 
 | Item | Current evidence | Remaining action |
 | --- | --- | --- |
-| npm | Public latest is `0.4.0`; the latest resume returned `E404` before the maintainer clicked `Set up connection` | Complete the prepared connection and security verification, then retry the original tarball |
+| npm | Public latest is `0.8.2`; the registry tarball is byte-for-byte identical to the original GitHub asset; a fresh registry install passed the core and markdown-it smoke checks | Complete |
 | VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
 | Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
 | Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
-| Old source repositories | Migration notices are present; the temporary migration snapshot and old VS Code repository are archived | Archive the old core and Logseq repositories after their corresponding publishing or update-channel handover is verified |
+| Old source repositories | Migration notices are present; the temporary migration snapshot, old core, and old VS Code repositories are archived | Archive the old Logseq repository after its update-channel handover is verified |
 
 After the account steps, the release resume command in the root README reuses
 the original public artifacts. The code, packaging, and GitHub release do not
@@ -142,6 +142,16 @@ npm rejected that resume with `E404`; the maintainer subsequently clarified that
 the prepared connection had not yet been submitted. The tarball's repository URL,
 workflow OIDC permission, and runner's Node/npm versions were checked and are correct.
 All seven public GitHub asset IDs and digests remain unchanged.
+
+After the maintainer submitted the npm connection, retrying only the failed npm
+job completed the same release run successfully (attempt 2). Public npm latest
+became `0.8.2`, with integrity
+`sha512-YQh+ooaWwbtmvTUv1vArihgU0WCB9xyRT1vrf7g5BsweueozkfwFHBTYv6vDryx+vDoAXonlIx7vQuQgrkMImQ==`.
+The downloaded registry tarball is identical to the original GitHub asset and has
+provenance metadata. A clean temporary project installed the public package and
+markdown-it from npm; both the standalone core and markdown-it adapter correctly
+rendered `[artefact]^^((semi-)formal artefact)`. The old core repository was then
+archived, retaining its migration guidance and historical releases.
 
 ## Daily workflow
 
