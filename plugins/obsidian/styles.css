@@ -1,0 +1,132 @@
+/*
+ * Inline Annotation — Obsidian reading-view stylesheet
+ *
+ * Mirrors the canonical ia-* class contract used by the markdown-it and
+ * Logseq implementations. The core renderer emits inline styles for critical
+ * positioning, but Obsidian still needs this stylesheet for stable ruby text
+ * sizing and host-independent class-mode behavior.
+ */
+
+body {
+  --ia-rt-font-size: 0.6em;
+  --ia-rt-line-height: 1;
+  --ia-underline-offset: 0.15em;
+}
+
+ruby.ia-ruby {
+  display: ruby;
+}
+
+ruby.ia-ruby rt,
+ruby.ia-ruby rtc rt {
+  font-size: var(--ia-rt-font-size);
+  line-height: var(--ia-rt-line-height);
+}
+
+ruby.ia-ruby.ia-ruby-over {
+  ruby-position: over;
+}
+
+ruby.ia-ruby.ia-ruby-under {
+  ruby-position: under;
+}
+
+span.ia-bouten.ia-bouten-over {
+  text-emphasis: filled dot;
+  -webkit-text-emphasis: filled dot;
+  text-emphasis-position: over right;
+  -webkit-text-emphasis-position: over right;
+}
+
+span.ia-bouten.ia-bouten-under {
+  text-decoration: underline dotted;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+span.ia-bouten.ia-bouten-over.ia-bouten-under {
+  text-emphasis: filled dot;
+  -webkit-text-emphasis: filled dot;
+  text-emphasis-position: over right;
+  -webkit-text-emphasis-position: over right;
+  text-decoration: underline dotted;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+span.ia-bouten.ia-bouten-over.ia-underline {
+  text-emphasis: filled dot;
+  -webkit-text-emphasis: filled dot;
+  text-emphasis-position: over right;
+  -webkit-text-emphasis-position: over right;
+  text-decoration-line: underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+span.ia-bouten.ia-bouten-under.ia-underline {
+  text-decoration-line: underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+span.ia-underline {
+  text-decoration-line: underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+span.ia-overline {
+  text-decoration-line: overline;
+}
+
+span.ia-overline.ia-underline {
+  text-decoration-line: overline underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+.ia-underline-wavy {
+  text-decoration-style: wavy;
+}
+
+.ia-overline-wavy {
+  text-decoration-style: wavy;
+}
+
+.ia-underline-double {
+  text-decoration-style: double;
+}
+
+.ia-overline-double {
+  text-decoration-style: double;
+}
+
+ruby.ia-ruby-mixed.ia-bouten-over {
+  text-emphasis: filled dot;
+  -webkit-text-emphasis: filled dot;
+  text-emphasis-position: over right;
+  -webkit-text-emphasis-position: over right;
+}
+
+ruby.ia-ruby-mixed.ia-bouten-under {
+  text-decoration: underline dotted;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+ruby.ia-ruby-mixed.ia-underline {
+  text-decoration-line: underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+ruby.ia-ruby-mixed.ia-overline {
+  text-decoration-line: overline;
+}
+
+ruby.ia-ruby-mixed.ia-overline.ia-underline {
+  text-decoration-line: overline underline;
+  text-underline-offset: var(--ia-underline-offset);
+}
+
+.ia-live-preview-widget {
+  display: inline;
+}
+
+.markdown-source-view.mod-cm6 .ia-live-preview-markdown-reset,
+.markdown-source-view.mod-cm6 .ia-live-preview-markdown-reset .cm-em {
+  font-style: normal;
+}
