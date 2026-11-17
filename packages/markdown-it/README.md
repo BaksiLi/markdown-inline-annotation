@@ -1,3 +1,5 @@
+> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `packages/markdown-it`. Run workspace commands from the repository root; see the [root guide](../../README.md).
+
 # markdown-it-inline-annotation
 
 Reference parser, HTML renderer, and `markdown-it` adapter for **Inline
@@ -129,39 +131,29 @@ workarounds remain outside the core.
 | [`markdown-it-inline-annotation`](https://www.npmjs.com/package/markdown-it-inline-annotation) | parser/model, HTML renderer, markdown-it plugin |
 | [Inline Ruby Annotation for Obsidian](https://community.obsidian.md/plugins/inline-annotation) | Reading view and Live Preview |
 | [Inline Annotation for VS Code](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) | built-in Markdown preview |
-| [`logseq-furigana-ruby`](https://github.com/BaksiLi/logseq-furigana-ruby) | Logseq renderer, macros, and conversion commands |
+| [`logseq-furigana-ruby`](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/plugins/logseq) | Logseq renderer, macros, and conversion commands |
 | `satteri-inline-annotation` | two-phase Sätteri Markdown adapter (local pilot, not published) |
 | remark/unified | planned when an AST pipeline needs it |
 
 ## Development
 
-```bash
-npm test
-npm run build:examples
-npm run check:release
+Run from the monorepo root:
+
+```sh
+npm ci
+npm run check:release --workspace packages/markdown-it
+npm run build:examples --workspace packages/markdown-it
 ```
 
-`check:release` runs tests, regenerates examples, checks exports and whitespace,
-packs the tarball, and verifies that `/core` installs and runs without
-`markdown-it`.
+The release command is `npm run release:prepare -- patch` at the root. The single
+bare version tag releases all integrations; see the [release guide](../../README.md#release).
 
-Pushing a `v<package-version>` tag runs the complete release check, publishes
-the tested archive to npm, and attaches it to a GitHub release.
-Configure npm trusted publishing for `BaksiLi/markdown-it-inline-annotation`
-and workflow `release.yml` once; the workflow uses GitHub OIDC rather than a
-stored npm token.
-To retry a release, dispatch the Release workflow on the same tag.
-An already published version is accepted only when its archive integrity
-matches the current build.
-
-Project documents:
-
-- [SPEC.md](./SPEC.md): normative syntax and compatibility contract.
-- [docs/ADAPTERS.md](./docs/ADAPTERS.md): host ownership, profiles, and port checklist.
-- [docs/ROADMAP.md](./docs/ROADMAP.md): architecture and release direction.
-- [CHANGELOG.md](./CHANGELOG.md): package history.
-- [examples/playground.html](./examples/playground.html): generated core demo.
-- [examples/before-after.html](./examples/before-after.html): visual examples.
+- [Specification](../../SPEC.md)
+- [Adapter contract](../../docs/ADAPTERS.md)
+- [Roadmap](../../docs/ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- [Generated playground](examples/playground.html)
+- [Visual examples](examples/before-after.html)
 
 ## License
 

@@ -100,8 +100,7 @@ Logseq keep their host-specific boundary tests.
 ### Sätteri adapter pilot
 
 Cogitatum is the first concrete consumer. The adapter lives in the independent
-`satteri-inline-annotation` sibling repository because Sätteri versioning,
-host-boundary tests, and releases are separate from the syntax/core package.
+`packages/satteri` workspace, with host-boundary tests alongside the syntax/core package.
 This does not require moving the other adapters or extracting the neutral core:
 the existing `markdown-it-inline-annotation/core` export is already the right
 runtime boundary.
@@ -171,17 +170,14 @@ different parser's rule-order workaround.
 
 ## Project Shape
 
-The current workspace is a set of independent sibling Git repositories, not a
-monorepo. The sibling checkout is convenient for local integration, but each
-host adapter owns its dependencies, tests, version, and release cadence.
-
-The spec currently lives in this repository because the package, parser,
-fixtures, and examples are released together. A neutral repository or monorepo
-becomes worthwhile when `@inline-annotation/core` is extracted:
+The project now lives in the `markdown-inline-annotation` monorepo, with one npm
+workspace, lockfile, shared conformance corpus, and release line. The existing
+`markdown-it-inline-annotation/core` export remains the host-neutral boundary;
+extracting or renaming that package is independent of repository consolidation.
 
 ```text
-spec/  packages/core/  packages/markdown-it/  packages/remark/
-plugins/obsidian/  plugins/logseq/  plugins/vscode/  examples/
+SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/satteri/
+plugins/obsidian/  plugins/logseq/  plugins/vscode/  scripts/
 ```
 
 Brand: **Inline Annotation**. Host listings may use **Inline Ruby Annotation**

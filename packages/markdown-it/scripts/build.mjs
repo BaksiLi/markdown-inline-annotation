@@ -1,3 +1,5 @@
+import { syncPackageSpec } from "../../../scripts/spec.mjs";
+syncPackageSpec();
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import ts from "typescript";

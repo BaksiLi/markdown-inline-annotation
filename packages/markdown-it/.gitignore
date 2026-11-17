@@ -20,3 +20,8 @@ Thumbs.db
 
 # npm
 *.tgz
+
+# Generated from the monorepo specification.
+/SPEC.md
+/fixtures/
+/docs/

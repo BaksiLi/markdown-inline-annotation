@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags: ["[0-9]*.[0-9]*.[0-9]*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify shared version and tag
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          assert.equal(process.env.GITHUB_REF_TYPE, "tag");
+          assert.equal(process.env.GITHUB_REF_NAME, pkg.version);
+          NODE
+      - run: npm ci
+      - run: npm run check
+      - run: npm run release:pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: artifacts/*
+          if-no-files-found: error
+          overwrite: true
+
+  github:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: artifacts
+      - run: npm run release:publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/attest@v4
+        with:
+          subject-path: artifacts/*
+
+  npm:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: artifacts
+      - run: node scripts/publish-npm.mjs
+
+  marketplace:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+    steps:
+      - name: Report publisher setup
+        if: env.AZURE_CLIENT_ID == '' || env.AZURE_TENANT_ID == ''
+        run: |
+          echo "::notice::GitHub VSIX is available; Marketplace publishing needs publisher federation."
+          echo "Marketplace: not published. Configure AZURE_CLIENT_ID and AZURE_TENANT_ID and grant publisher access." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v4
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
+      - uses: actions/setup-node@v4
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
+        with:
+          name: release
+          path: artifacts
+      - uses: azure/login@v2
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - name: Publish verified VSIX
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != ''
+        run: npx --yes @vscode/vsce@4.0.0 publish --azure-credential --packagePath artifacts/*.vsix --skip-duplicate

@@ -1,3 +1,5 @@
+> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/obsidian`. Run workspace commands from the repository root; see the [root guide](../../README.md).
+
 # Inline Ruby Annotation for Obsidian
 
 Render Inline Annotation syntax as ruby/furigana, over/under glosses, bouten,
@@ -11,7 +13,7 @@ overlines, and underlines in Obsidian.
 
 The plugin supports Reading view and an early Live Preview replacement widget.
 Both use the model from
-[`markdown-it-inline-annotation/core`](https://github.com/BaksiLi/markdown-it-inline-annotation).
+[`markdown-it-inline-annotation/core`](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it).
 
 ## Behavior
 
@@ -62,25 +64,24 @@ body {
 
 ## Development
 
+Run from the monorepo root:
+
 ```sh
-npm install
-npm run check
+npm ci
+npm run build --workspace packages/markdown-it
+npm run check --workspace plugins/obsidian
 ```
 
-`npm version` synchronizes `manifest.json` and `versions.json`.
-Push the matching bare version tag, such as `0.4.0`, to test, build, and upload
-the three Obsidian release assets with attestations.
-The Release workflow can also be dispatched on an existing tag to retry it.
-
-`npm run check` builds the plugin, runs the shared rendering and segment-boundary
-fixtures, tests Live Preview source ranges, and verifies package safety rules.
-The core package is bundled into `main.js`; Obsidian and its CodeMirror packages
-remain external so the editor keeps one CodeMirror runtime.
+The root `release:prepare` command synchronizes the manifest, versions map, and
+update metadata. All products release from one bare version tag; see the
+[root release guide](../../README.md#release).
+The check covers shared fixtures, Live Preview ranges, and package safety rules.
+The core is bundled; Obsidian and CodeMirror remain external.
 
 To test the runtime files in a vault:
 
 ```sh
-npm run install:vault -- "/path/to/Vault" --clean --enable --examples
+npm run install:vault --workspace plugins/obsidian -- "/path/to/Vault" --clean --enable --examples
 ```
 
 Then reload Obsidian or disable and re-enable the plugin. The installer copies
@@ -90,18 +91,11 @@ also installs the maintained smoke and showcase notes.
 - [examples/obsidian-smoke.md](./examples/obsidian-smoke.md): focused smoke test.
 - [examples/obsidian-showcase.md](./examples/obsidian-showcase.md): broader visual pass.
 
-To update the published core intentionally:
-
-```sh
-npm run update:core
-npm run check
-```
-
 ## Ecosystem
 
-- [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-it-inline-annotation)
+- [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it)
 - [Inline Annotation for VS Code](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation)
-- [Logseq reference plugin](https://github.com/BaksiLi/logseq-furigana-ruby)
+- [Logseq reference plugin](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/plugins/logseq)
 - [Original proposal](https://blog.baksili.codes/markdown-ruby)
 
 ## Safety

@@ -3,6 +3,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["ES2020"],
+    "types": ["node"],
     "module": "CommonJS",
     "moduleResolution": "Node",
     "outDir": "dist",

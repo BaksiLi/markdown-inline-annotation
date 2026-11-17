@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0
+
+- Move development and releases to the Inline Annotation monorepo.
+- Preserve syntax v2, package names, and plugin IDs; use the shared 0.8.0 release line.
+
 ## 0.4.0
 
 - Support balanced parentheses in annotation text within Inline Annotation v2,

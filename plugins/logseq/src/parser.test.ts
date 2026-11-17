@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { hasRuby, rubyToHTML, renderMacroRuby, anyToMarkup, anyToMacro, anyToHTML, replaceRubyInElement } from "./parser";
-import segmentBoundaryCorpus from "./shared-segment-boundary-fixtures.json";
+import segmentBoundaryCorpus from "../../../fixtures/segment-boundaries.json";
 import { htmlRenderFixtureCorpus, htmlRenderFixtures } from "./spec-fixtures";
 
 // ---------------------------------------------------------------------------

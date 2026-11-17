@@ -1,3 +1,5 @@
+> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/vscode`. Run workspace commands from the repository root; see the [root guide](../../README.md).
+
 # Inline Ruby Annotation for VS Code
 
 Preview Inline Annotation syntax as ruby/furigana, over/under glosses, bouten,
@@ -10,7 +12,7 @@ overlines, and underlines in VS Code's built-in Markdown preview.
 ```
 
 The extension is a thin adapter: it installs
-[`markdown-it-inline-annotation`](https://github.com/BaksiLi/markdown-it-inline-annotation)
+[`markdown-it-inline-annotation`](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it)
 through VS Code's `extendMarkdownIt` hook.
 
 ## Scope
@@ -29,38 +31,26 @@ markdown-it's rules.
 
 ## Development
 
-```sh
-npm install
-npm run check
-```
-
-Inside the sibling-repo workspace, verify the adapter against an unpublished
-core change with:
+Run from the monorepo root:
 
 ```sh
-npm run check:local
+npm ci
+npm run build --workspace packages/markdown-it
+npm run check --workspace plugins/vscode
 ```
 
-The test suite runs the shared renderer corpus and the contiguous-source side
-of the segment-boundary fixtures. Before publishing, update the lockfile to the
-released core version and run the normal `npm run check` path again.
-
-Pushing a `v<package-version>` tag runs the checks, packages the extension with
-its core dependency, and uploads the VSIX to GitHub.
-The Release workflow can be dispatched on the same tag to retry it.
-Marketplace publishing also runs when repository variables `AZURE_CLIENT_ID`
-and `AZURE_TENANT_ID` identify a federated Microsoft Entra application with
-access to the `baksili` publisher.
-Without that setup, the workflow explicitly reports that only the GitHub VSIX
-was released.
-See the [VS Code publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
-for the publisher and federation setup.
+The tests run the shared rendering and contiguous-source boundary corpora. The
+root `release:pack` command stages a standalone core runtime and verifies the VSIX.
+All products release together from a bare version tag; see the
+[root release guide](../../README.md#release). Marketplace publishing still needs
+federated Entra publisher access. Without it, GitHub distributes the VSIX and the
+workflow explicitly reports that Marketplace was not published.
 
 ## Ecosystem
 
-- [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-it-inline-annotation)
+- [Inline Annotation spec and core](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it)
 - [Inline Ruby Annotation for Obsidian](https://community.obsidian.md/plugins/inline-annotation)
-- [Logseq reference plugin](https://github.com/BaksiLi/logseq-furigana-ruby)
+- [Logseq reference plugin](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/plugins/logseq)
 - [Original proposal](https://blog.baksili.codes/markdown-ruby)
 
 ## Safety

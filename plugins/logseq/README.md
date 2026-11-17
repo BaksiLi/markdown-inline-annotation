@@ -1,3 +1,5 @@
+> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/logseq`. Run workspace commands from the repository root; see the [root guide](../../README.md).
+
 # logseq-furigana-ruby
 
 Logseq plugin for **Inline Annotation**: ruby/furigana, over/under glosses,
@@ -7,7 +9,7 @@ bouten, overlines, and underlines using `[base]^^(ruby)` and
 ![Inline Annotation showcase](./assets/logseq_showcase.png)
 
 The portable grammar and `ia-*` HTML class contract live in the
-[Inline Annotation spec](https://github.com/BaksiLi/markdown-it-inline-annotation/blob/main/SPEC.md).
+[Inline Annotation spec](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md).
 This plugin keeps an independent parser plus Logseq-specific macros and
 conversion commands.
 
@@ -80,28 +82,28 @@ An expression fully contained inside one formatted run can still render.
 ## Development
 
 ```bash
-pnpm install
-pnpm test
-pnpm build
-pnpm dev
+npm ci
+npm run test --workspace plugins/logseq
+npm run build --workspace plugins/logseq
+npm run dev --workspace plugins/logseq
 ```
 
 The test suite runs the shared HTML corpus, shared segment-boundary fixtures,
 Logseq conversion workflows, and parser-specific cases.
 
-Pushing a `v<package-version>` tag tests and builds the plugin, then uploads
-`logseq-furigana-ruby.zip` to its GitHub release.
-The same tag can be used to retry the Publish Plugin workflow manually.
+Run these commands from the monorepo root. The shared release workflow attaches
+`logseq-furigana-ruby.zip` to each bare-version release together with the other
+integrations. See the [release guide](../../README.md#release).
 
 For manual installation:
 
-1. Run `pnpm build`.
+1. Run `npm run build --workspace plugins/logseq` from the repository root.
 2. Enable Developer mode in Logseq under Settings → Advanced.
-3. Choose Plugins → Load unpacked plugin and select this folder.
+3. Choose Plugins → Load unpacked plugin and select `plugins/logseq`.
 
 ## Ecosystem
 
-- [Inline Annotation spec and markdown-it package](https://github.com/BaksiLi/markdown-it-inline-annotation)
+- [Inline Annotation spec and markdown-it package](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it)
 - [Inline Ruby Annotation for Obsidian](https://community.obsidian.md/plugins/inline-annotation)
 - [Inline Annotation for VS Code](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation)
 - [Original proposal](https://blog.baksili.codes/markdown-ruby)

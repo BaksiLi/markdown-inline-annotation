@@ -1,6 +1,8 @@
+> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `packages/satteri`. Run workspace commands from the repository root; see the [root guide](../../README.md).
+
 # satteri-inline-annotation
 
-Sätteri adapter for [Inline Annotation](https://github.com/BaksiLi/markdown-it-inline-annotation):
+Sätteri adapter for [Inline Annotation](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it):
 visible ruby/furigana, over/under glosses, bouten, overlines, and underlines in
 Markdown.
 
@@ -10,7 +12,7 @@ source ranges, canonical HTML, and conformance fixtures remain owned by
 
 ## Status
 
-`0.1.0` is a local integration pilot tested against Sätteri `0.9.5` (the first
+This remains a local integration pilot tested against Sätteri `0.9.5` (the first
 Cogitatum consumer) and `0.10.5`. It is not published. Plain Markdown is
 supported; MDX is deliberately preserved unchanged until the adapter can use a
 safe literal-insertion contract across the supported Sätteri range.
@@ -20,7 +22,7 @@ safe literal-insertion contract across the supported Sätteri range.
 From a sibling consumer such as `cogitatum-dev`:
 
 ```bash
-npm install ../md-inline-annotation/satteri-inline-annotation
+npm install ../md-inline-annotation/markdown-inline-annotation/packages/satteri
 ```
 
 The package uses `markdown-it-inline-annotation/core` for all parsing and
@@ -85,7 +87,7 @@ core fixture corpus first; keep Sätteri parser timing and container cases here.
 ```bash
 npm install
 npm test
-npm run check
+npm run check --workspace packages/satteri
 ```
 
 The test suite consumes the published fixture exports from

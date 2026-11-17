@@ -1,4 +1,4 @@
-import corpus from "./shared-html-render-fixtures.json";
+import corpus from "../../../fixtures/html-render.json";
 
 export interface HtmlRenderFixtureCount {
   pattern: string;

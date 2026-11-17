@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-inline-annotation",
-  "version": "0.4.0",
+  "version": "0.8.0",
   "description": "Inline Annotation parser, HTML renderer, and markdown-it plugin for ruby/furigana, bouten, line marks, and two-slot glosses.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -58,11 +58,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BaksiLi/markdown-it-inline-annotation.git"
+    "url": "git+https://github.com/BaksiLi/markdown-inline-annotation.git",
+    "directory": "packages/markdown-it"
   },
-  "homepage": "https://github.com/BaksiLi/markdown-it-inline-annotation#readme",
+  "homepage": "https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it#readme",
   "bugs": {
-    "url": "https://github.com/BaksiLi/markdown-it-inline-annotation/issues"
+    "url": "https://github.com/BaksiLi/markdown-inline-annotation/issues"
   },
   "publishConfig": {
     "access": "public"
