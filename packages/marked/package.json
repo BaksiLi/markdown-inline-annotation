@@ -1,0 +1,55 @@
+{
+  "name": "marked-inline-annotation",
+  "version": "0.8.4",
+  "description": "Marked inline extension for the Inline Annotation syntax and canonical renderer.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "npm run typecheck && npm test && npm pack --dry-run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "marked",
+    "markdown",
+    "inline-annotation",
+    "ruby",
+    "furigana",
+    "bouten"
+  ],
+  "author": "Baksi Li",
+  "license": "MIT",
+  "dependencies": {
+    "markdown-it-inline-annotation": "^0.8.4"
+  },
+  "peerDependencies": {
+    "marked": "^18.2.1"
+  },
+  "devDependencies": {
+    "marked": "18.2.1",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BaksiLi/markdown-inline-annotation.git",
+    "directory": "packages/marked"
+  },
+  "homepage": "https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/marked#readme",
+  "bugs": {
+    "url": "https://github.com/BaksiLi/markdown-inline-annotation/issues"
+  },
+  "private": true
+}

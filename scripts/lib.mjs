@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 export const root = fileURLToPath(new URL("../", import.meta.url));
 export const workspaces = [
   "packages/markdown-it",
+  "packages/marked",
   "plugins/logseq",
   "plugins/obsidian",
   "plugins/vscode",

@@ -10,7 +10,8 @@ host adapters.
 | Project | Role | Workspace |
 | --- | --- | --- |
 | `markdown-it-inline-annotation` | parser/model, HTML renderer, markdown-it adapter | `packages/markdown-it` |
-| `logseq-furigana-ruby` | independent parser, macros, conversions, Logseq renderer | `plugins/logseq` |
+| `marked-inline-annotation` | Marked inline tokenizer and renderer, workspace pilot | `packages/marked` |
+| `logseq-furigana-ruby` | shared-core markup rendering, Logseq macros and conversions | `plugins/logseq` |
 | `obsidian-inline-annotation` | Reading view and Live Preview | `plugins/obsidian` |
 | `vscode-inline-annotation` | thin built-in Markdown preview adapter | `plugins/vscode` |
 | `satteri-inline-annotation` | two-phase Sätteri Markdown adapter; unpublished pilot | `packages/satteri` |
@@ -24,11 +25,6 @@ The historical milestones below retain their original package version numbers.
 - Replace the SDK's embedded vulnerable dependencies through a supported
   upstream release or a separately reviewed, reproducible rebuild. Lockfile
   overrides alone do not alter its prebundled JavaScript.
-- Preserve escapes across the independent renderer's repeated passes.
-  `[a\^^(b)]^_(.-)` can reinterpret an escaped operator, and
-  `[\[y\]^^(b)]^_(.-)` can produce malformed HTML. The new live DOM builder
-  leaves malformed output as original text; the string conversion API still
-  needs a separate correction and conformance coverage.
 
 ## Contracts
 
@@ -189,7 +185,7 @@ workspace, lockfile, shared conformance corpus, and release line. The existing
 extracting or renaming that package is independent of repository consolidation.
 
 ```text
-SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/satteri/
+SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/marked/  packages/satteri/
 plugins/obsidian/  plugins/logseq/  plugins/vscode/  scripts/
 ```
 

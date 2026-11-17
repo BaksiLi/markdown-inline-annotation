@@ -1,3 +1,5 @@
+import { findInlineAnnotationModels, renderInlineAnnotationModelToHtml } from "markdown-it-inline-annotation/core";
+
 /**
  * Ruby (Furigana) parser implementing the proposal syntax.
  *
@@ -127,15 +129,6 @@ function formatMacroAnnotationLevels(levels: string[]): string {
   return levels.map(escapeMacroAnnotation).join("|");
 }
 
-function hasRenderedAnnotationHtml(input: string): boolean {
-  return GENERATED_ANNOTATION_HTML_RE.test(input);
-}
-
-function escapedBaseHtml(input: string, allowRenderedAnnotationHtml = false): string {
-  const text = unescape(input);
-  return allowRenderedAnnotationHtml && hasRenderedAnnotationHtml(text) ? text : escapeHtml(text);
-}
-
 function splitByUnescapedPipe(input: string): string[] {
   const out: string[] = [];
   let buf = "";
@@ -149,17 +142,6 @@ function splitByUnescapedPipe(input: string): string[] {
   }
   out.push(buf);
   return out;
-}
-
-function overflowAfterSecondUnescapedPipe(input: string): string {
-  let pipes = 0;
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] === "|" && !isEscaped(input, i)) {
-      pipes++;
-      if (pipes === 2) return input.slice(i);
-    }
-  }
-  return "";
 }
 
 function findCloseParen(input: string, start: number): number {
@@ -183,12 +165,12 @@ function findOpenBracket(input: string, closeBracketIdx: number): number {
   return -1;
 }
 
-function findAbbreviatedBaseStart(input: string, opStart: number, extraBoundaryChars = ""): number {
+function findAbbreviatedBaseStart(input: string, opStart: number): number {
   let k = opStart - 1;
   while (k >= 0) {
     const ch = input[k];
     if (/\s/.test(ch)) break;
-    if ((ABBREVIATED_BOUNDARY_CHARS.includes(ch) || extraBoundaryChars.includes(ch)) && !isEscaped(input, k)) break;
+    if (ABBREVIATED_BOUNDARY_CHARS.includes(ch) && !isEscaped(input, k)) break;
     k--;
   }
   return k + 1;
@@ -221,9 +203,9 @@ function boutenInlineStyle(op: RubyOp): string {
   return op === "^^" ? STYLE_BOUTEN_OVER : STYLE_BOUTEN_UNDER;
 }
 
-/** Return ` style="..."` attr for under-positioned ruby, empty for over */
+/** Set both positions explicitly for nested ruby. */
 function rubyPosAttr(pos: string): string {
-  return pos === "ia-ruby-under" ? ` style="${STYLE_RUBY_UNDER}"` : "";
+  return pos === "ia-ruby-under" ? ` style="${STYLE_RUBY_UNDER}"` : ' style="ruby-position:over"';
 }
 
 /** Wrap a character in an empty-annotation ruby to preserve vertical spacing */
@@ -242,46 +224,13 @@ function emptyRuby(char: string, pos: string): string {
  *   is unreliably clipped by Logseq's Electron container. Dotted underline
  *   is semantically close and renders stably.
  */
-function renderBouten(base: string, op: RubyOp, allowRenderedBaseHtml = false): string {
+function renderBouten(base: string, op: RubyOp): string {
   const pos = op === "^^" ? "ia-bouten-over" : "ia-bouten-under";
-  return `<span class="ia-bouten ${pos}" style="${boutenInlineStyle(op)}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
+  return `<span class="ia-bouten ${pos}" style="${boutenInlineStyle(op)}">${escapeHtml(unescape(base))}</span>`;
 }
 
-function renderBoutenBoth(base: string, allowRenderedBaseHtml = false): string {
-  // Over = text-emphasis, Under = dotted underline, on the same element
-  return `<span class="ia-bouten ia-bouten-over ia-bouten-under" style="${STYLE_BOUTEN_OVER};${STYLE_BOUTEN_UNDER}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
-}
-
-function renderLine(base: string, op: RubyOp, style: UnderlineStyle = "solid", allowRenderedBaseHtml = false): string {
-  return `<span class="${lineClasses(op, style)}" style="${lineInlineStyle(op, style)}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
-}
-
-function renderLineBoth(base: string, first: { op: RubyOp; style: UnderlineStyle }, second: { op: RubyOp; style: UnderlineStyle }, allowRenderedBaseHtml = false): string {
-  const ordered = [first, second].sort((a, b) => (a.op === b.op ? 0 : a.op === "^^" ? -1 : 1));
-  let html = escapedBaseHtml(base, allowRenderedBaseHtml);
-  for (let i = ordered.length - 1; i >= 0; i--) {
-    const item = ordered[i];
-    html = `<span class="${lineClasses(item.op, item.style)}" style="${lineInlineStyle(item.op, item.style)}">${html}</span>`;
-  }
-  return html;
-}
-
-/**
- * Render mixed: ruby annotation on one side + bouten/underline on the other
- */
-function renderRubyWithBouten(base: string, rubyText: string, rubyOp: RubyOp, boutenOp: RubyOp, allowRenderedBaseHtml = false): string {
-  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
-  const rubyPos = rubyOp === "^^" ? "ia-ruby-over" : "ia-ruby-under";
-  const boutenPos = boutenOp === "^^" ? "over" : "under";
-  const styles = [rubyPos === "ia-ruby-under" ? STYLE_RUBY_UNDER : "", boutenInlineStyle(boutenOp)].filter(Boolean).join(";");
-  return `<ruby class="ia-ruby ia-ruby-mixed ${rubyPos} ia-bouten-${boutenPos}" style="${styles}">${safeBase}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
-}
-
-function renderRubyWithLine(base: string, rubyText: string, rubyOp: RubyOp, lineOp: RubyOp, style: UnderlineStyle = "solid", allowRenderedBaseHtml = false): string {
-  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
-  const rubyPos = rubyOp === "^^" ? "ia-ruby-over" : "ia-ruby-under";
-  const styles = [rubyPos === "ia-ruby-under" ? STYLE_RUBY_UNDER : "", lineInlineStyle(lineOp, style)].filter(Boolean).join(";");
-  return `<ruby class="ia-ruby ia-ruby-mixed ${rubyPos} ${lineClasses(lineOp, style)}" style="${styles}">${safeBase}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
+function renderLine(base: string, op: RubyOp, style: UnderlineStyle = "solid"): string {
+  return `<span class="${lineClasses(op, style)}" style="${lineInlineStyle(op, style)}">${escapeHtml(unescape(base))}</span>`;
 }
 
 /**
@@ -298,8 +247,8 @@ function shouldHideAnnotation(baseChar: string, annotation: string): boolean {
   return baseChar === annotation;
 }
 
-function renderRuby(base: string, op: RubyOp, levels: string[], allowRenderedBaseHtml = false): string {
-  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
+function renderRuby(base: string, op: RubyOp, levels: string[]): string {
+  const safeBase = escapeHtml(unescape(base));
   const capped = levels.slice(0, 2);
   const baseChars = Array.from(unescape(base));
 
@@ -463,263 +412,17 @@ export function hasAnyRubyContent(text: string): boolean {
 
 const MACRO_RE = /\{\{renderer\s+:ruby,\s*([^,}]+),\s*([^,}]+)(?:,\s*([^}]+))?\}\}/g;
 
-/**
- * Convert `^^()` / `^_()` markup to HTML (single pass).
- */
-function rubyToHTMLPass(input: string, allowRenderedBaseHtml: boolean, extraBoundaryChars = ""): string {
-  if (!hasRuby(input)) return input;
-
-  let out = "";
-  let i = 0;
-
-  while (i < input.length) {
-    OP_REGEX.lastIndex = i;
-    const m = OP_REGEX.exec(input);
-    if (!m) {
-      out += input.slice(i);
-      break;
-    }
-
-    const opStart = m.index;
-    const op: RubyOp = input[opStart + 1] === "^" ? "^^" : "^_";
-
-    let baseStart = -1;
-    let baseHtml = "";
-    const consumedFrom = i;
-
-    if (opStart > 0 && input[opStart - 1] === "]" && !isEscaped(input, opStart - 1)) {
-      const open = findOpenBracket(input, opStart - 1);
-      // Skip brackets that were already consumed (nested bracket support)
-      if (open >= 0 && open >= consumedFrom) {
-        baseStart = open;
-        baseHtml = input.slice(open + 1, opStart - 1);
-      }
-    } else {
-      baseStart = findAbbreviatedBaseStart(input, opStart, extraBoundaryChars);
-      baseHtml = input.slice(baseStart, opStart);
-    }
-
-    if (baseStart < consumedFrom || baseStart < 0 || baseHtml.length === 0) {
-      out += input.slice(i, opStart + 1);
-      i = opStart + 1;
-      continue;
-    }
-
-    const annStart = opStart + 3;
-    const annEnd = findCloseParen(input, annStart);
-    if (annEnd < 0) {
-      out += input.slice(i, opStart + 1);
-      i = opStart + 1;
-      continue;
-    }
-
-    const rawAnn = input.slice(annStart, annEnd);
-    if (rawAnn.length === 0) {
-      out += input.slice(i, annEnd + 1);
-      i = annEnd + 1;
-      continue;
-    }
-
-    // --- Chained second operator (mixed only) ---
-    let finalEnd = annEnd + 1;
-    let rawAnn2: string | null = null;
-    let op2: RubyOp | null = null;
-    const next = annEnd + 1;
-
-    if (
-      next + 2 < input.length &&
-      input[next] === "^" &&
-      (input[next + 1] === "^" || input[next + 1] === "_") &&
-      input[next + 2] === "("
-    ) {
-      const nextOp: RubyOp = input[next + 1] === "^" ? "^^" : "^_";
-      if (nextOp !== op) {
-        const annStart2 = next + 3;
-        const annEnd2 = findCloseParen(input, annStart2);
-        if (annEnd2 >= 0) {
-          const candidate = input.slice(annStart2, annEnd2);
-          if (candidate.length > 0) {
-            rawAnn2 = candidate;
-            op2 = nextOp;
-            finalEnd = annEnd2 + 1;
-          }
-        }
-      }
-    }
-
-    // If first annotation already has pipe-separated levels (filling both positions),
-    // leave the chained operator in the stream as visible over-capacity text.
-    if (rawAnn2 !== null && splitByUnescapedPipe(rawAnn).length > 1) {
-      rawAnn2 = null;
-      op2 = null;
-      finalEnd = annEnd + 1;
-    }
-
-    // --- Special pattern detection ---
-    const isBouten1 = rawAnn === BOUTEN_PATTERN;
-    const isBouten2 = rawAnn2 === BOUTEN_PATTERN;
-    const lineStyle1 = getUnderlineStyle(rawAnn);
-    const lineStyle2 = getUnderlineStyle(rawAnn2 ?? "");
-    const isLine1 = lineStyle1 !== null;
-    const isLine2 = lineStyle2 !== null;
-    const isSpecial1 = isBouten1 || isLine1;
-    const isSpecial2 = isBouten2 || isLine2;
-
-    // --- Case 1: BOTH are special patterns ---
-    if (isSpecial1 && isSpecial2) {
-      out += input.slice(consumedFrom, baseStart);
-      
-      // Bouten + line combination
-      if ((isBouten1 && isLine2) || (isLine1 && isBouten2)) {
-        const boutenOp = isBouten1 ? op : op2;
-        const lineOp = isLine1 ? op : op2!;
-        const lineStyle = isLine1 ? lineStyle1 : lineStyle2!;
-        const comboStyle = [boutenInlineStyle(boutenOp!), lineInlineStyle(lineOp, lineStyle)].join(";");
-        out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, lineStyle)}" style="${comboStyle}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
-      }
-      // Bouten + Bouten (both dots)
-      else if (isBouten1 && isBouten2) {
-        out += renderBoutenBoth(baseHtml, allowRenderedBaseHtml);
-      }
-      // Line + line: preserve both sides when they differ.
-      else {
-        out += op2 && op2 !== op
-          ? renderLineBoth(baseHtml, { op, style: lineStyle1! }, { op: op2, style: lineStyle2! }, allowRenderedBaseHtml)
-          : renderLine(baseHtml, op, lineStyle1!, allowRenderedBaseHtml);
-      }
-      
-      i = finalEnd;
-      continue;
-    }
-
-    // --- Case 2: ONLY first is special pattern (no chain) ---
-    if (isSpecial1 && !rawAnn2) {
-      out += input.slice(consumedFrom, baseStart);
-      
-      if (isBouten1) {
-        out += renderBouten(baseHtml, op, allowRenderedBaseHtml);
-      } else {
-        out += renderLine(baseHtml, op, lineStyle1!, allowRenderedBaseHtml);
-      }
-      
-      i = annEnd + 1;
-      continue;
-    }
-
-    // --- Case 3: Mixed special pattern + regular ruby text ---
-    if (rawAnn2 && (isSpecial1 || isSpecial2)) {
-      out += input.slice(consumedFrom, baseStart);
-      
-      // One is special, one is regular text
-      if (isSpecial1 && !isSpecial2) {
-        // First is special (bouten/underline), second is ruby text
-        const rubyText = unescape(rawAnn2);
-        if (isBouten1) {
-          out += renderRubyWithBouten(baseHtml, rubyText, op2!, op, allowRenderedBaseHtml);
-        } else {
-          out += renderRubyWithLine(baseHtml, rubyText, op2!, op, lineStyle1!, allowRenderedBaseHtml);
-        }
-      } else if (!isSpecial1 && isSpecial2) {
-        // First is ruby text, second is special (bouten/underline)
-        const rubyText = unescape(rawAnn);
-        if (isBouten2) {
-          out += renderRubyWithBouten(baseHtml, rubyText, op, op2!, allowRenderedBaseHtml);
-        } else {
-          out += renderRubyWithLine(baseHtml, rubyText, op, op2!, lineStyle2!, allowRenderedBaseHtml);
-        }
-      }
-      
-      i = finalEnd;
-      continue;
-    }
-
-    // --- Case 4: Regular ruby (both are normal text) ---
-    const rawLevels = splitByUnescapedPipe(rawAnn);
-    const levels = rawLevels.map(unescape);
-    const overflowHtml = rawAnn2 ? "" : escapeHtml(unescape(overflowAfterSecondUnescapedPipe(rawAnn)));
-    if (rawAnn2) {
-      levels.push(...splitByUnescapedPipe(rawAnn2).map(unescape));
-    }
-
-    // Detect special patterns in pipe-separated levels
-    if (levels.length === 2 && !rawAnn2) {
-      const innerOp = op;
-      const outerOp: RubyOp = op === "^^" ? "^_" : "^^";
-
-      const isInnerBouten = rawLevels[0] === BOUTEN_PATTERN;
-      const isOuterBouten = rawLevels[1] === BOUTEN_PATTERN;
-      const innerLineStyle = getUnderlineStyle(rawLevels[0]);
-      const outerLineStyle = getUnderlineStyle(rawLevels[1]);
-      const isInnerLine = innerLineStyle !== null;
-      const isOuterLine = outerLineStyle !== null;
-      const isInnerSpecial = isInnerBouten || isInnerLine;
-      const isOuterSpecial = isOuterBouten || isOuterLine;
-
-      if (isInnerSpecial || isOuterSpecial) {
-        out += input.slice(consumedFrom, baseStart);
-
-        if (isInnerSpecial && isOuterSpecial) {
-          if (isInnerBouten && isOuterBouten) {
-            out += renderBoutenBoth(baseHtml, allowRenderedBaseHtml);
-          } else if ((isInnerBouten || isOuterBouten) && (isInnerLine || isOuterLine)) {
-            const boutenOp = isInnerBouten ? innerOp : outerOp;
-            const lineOp = isInnerLine ? innerOp : outerOp;
-            const pipeLineStyle = isInnerLine ? innerLineStyle : outerLineStyle!;
-            const comboStyle2 = [boutenInlineStyle(boutenOp), lineInlineStyle(lineOp, pipeLineStyle)].join(";");
-            out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, pipeLineStyle)}" style="${comboStyle2}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
-          } else {
-            out += renderLineBoth(baseHtml, { op: innerOp, style: innerLineStyle! }, { op: outerOp, style: outerLineStyle! }, allowRenderedBaseHtml);
-          }
-        } else if (isInnerSpecial) {
-          if (isInnerBouten) {
-            out += renderRubyWithBouten(baseHtml, levels[1], outerOp, innerOp, allowRenderedBaseHtml);
-          } else {
-            out += renderRubyWithLine(baseHtml, levels[1], outerOp, innerOp, innerLineStyle!, allowRenderedBaseHtml);
-          }
-        } else {
-          if (isOuterBouten) {
-            out += renderRubyWithBouten(baseHtml, levels[0], innerOp, outerOp, allowRenderedBaseHtml);
-          } else {
-            out += renderRubyWithLine(baseHtml, levels[0], innerOp, outerOp, outerLineStyle!, allowRenderedBaseHtml);
-          }
-        }
-
-        out += overflowHtml;
-        i = finalEnd;
-        continue;
-      }
-    }
-
-    out += input.slice(consumedFrom, baseStart);
-    out += renderRuby(baseHtml, op, levels, allowRenderedBaseHtml) + overflowHtml;
-    i = finalEnd;
-  }
-
-  return out;
-}
-
-/**
- * Convert `^^()` / `^_()` markup to HTML.
- * Runs multiple passes to support nested bracket expressions.
- */
+/** Convert annotation source while preserving surrounding Logseq markup verbatim. */
 export function rubyToHTML(input: string): string {
-  return renderMarkupHtml(input, "");
-}
-
-/**
- * `extraBoundaryChars` lets the live DOM path keep the boundary meaning of
- * characters it substitutes; the public string API always passes "".
- */
-function renderMarkupHtml(input: string, extraBoundaryChars: string): string {
   if (!hasRuby(input)) return input;
-  let result = input;
-  for (let pass = 0; pass < 5; pass++) {
-    const next = rubyToHTMLPass(result, pass > 0, extraBoundaryChars);
-    if (next === result) break;
-    result = next;
-    if (!hasRuby(result)) break;
+  let html = "";
+  let end = 0;
+  for (const model of findInlineAnnotationModels(input)) {
+    if (!model.base.raw) continue;
+    html += input.slice(end, model.start) + renderInlineAnnotationModelToHtml(model);
+    end = model.end;
   }
-  return result;
+  return html + input.slice(end);
 }
 
 // ---------------------------------------------------------------------------
@@ -790,6 +493,11 @@ function markupToMacro(input: string): string {
     }
 
     const opStart = m.index;
+    if (isEscaped(input, opStart)) {
+      out += input.slice(i, opStart + 1);
+      i = opStart + 1;
+      continue;
+    }
     const op: RubyOp = input[opStart + 1] === "^" ? "^^" : "^_";
 
     let baseStart = -1;
@@ -961,21 +669,15 @@ function htmlElementsToMacro(root: HTMLElement): void {
 
 export function anyToHTML(content: string): string {
   const { result: safe, tokens } = protectCode(content);
-  let result = safe;
-
-  // Macros → HTML
-  MACRO_RE.lastIndex = 0;
-  result = result.replace(MACRO_RE, (_match: string, base: string, ann: string, pos?: string) => {
-    const args = [":ruby", base, ann];
-    if (pos) args.push(pos);
-    return renderMacroRuby(args) ?? _match;
-  });
-
-  // Markup → HTML
-  if (hasRuby(result)) {
-    result = rubyToHTML(result);
+  let result = "";
+  let end = 0;
+  for (const match of safe.matchAll(MACRO_RE)) {
+    const [raw, base, ann, pos] = match;
+    result += rubyToHTML(safe.slice(end, match.index));
+    result += renderMacroRuby([":ruby", base, ann, pos]) ?? raw;
+    end = match.index + raw.length;
   }
-
+  result += rubyToHTML(safe.slice(end));
   return restoreCode(result, tokens);
 }
 
@@ -1101,6 +803,8 @@ const GENERATED_STYLE_DECLARATIONS = new Set(
     STYLE_BOUTEN_OVER,
     STYLE_BOUTEN_UNDER,
     STYLE_RUBY_UNDER,
+    "ruby-position:over",
+    "text-decoration-style:dotted",
     ...(["solid", "wavy", "double"] as UnderlineStyle[]).flatMap((style) => [
       lineInlineStyle("^^", style),
       lineInlineStyle("^_", style),
@@ -1114,34 +818,11 @@ const GENERATED_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">",
 
 class UnexpectedGeneratedHtml extends Error {}
 
-/** Characters standing in for literal source `<` / `&` during live rendering. */
-export interface TextSentinels {
-  lt: string;
-  amp: string;
-}
-
-/**
- * Pick two private-use characters absent from `text`, so no input character
- * is reserved. Null if fewer than two BMP private-use characters remain;
- * callers then leave the text unrendered.
- */
-function pickTextSentinels(text: string): TextSentinels | null {
-  const found: string[] = [];
-  for (let code = 0xe000; code <= 0xf8ff && found.length < 2; code++) {
-    const ch = String.fromCharCode(code);
-    if (!text.includes(ch)) found.push(ch);
-  }
-  return found.length === 2 ? { lt: found[0], amp: found[1] } : null;
-}
-
-function decodeGeneratedText(text: string, sentinels: TextSentinels): string {
-  return text
-    .replace(/&(?:(amp|lt|gt|quot);)?/g, (_match, name: string | undefined) => {
-      if (!name) throw new UnexpectedGeneratedHtml("bare ampersand");
-      return GENERATED_ENTITIES[name];
-    })
-    .replaceAll(sentinels.lt, "<")
-    .replaceAll(sentinels.amp, "&");
+function decodeGeneratedText(text: string): string {
+  return text.replace(/&(?:(amp|lt|gt|quot);)?/g, (_match, name: string | undefined) => {
+    if (!name) throw new UnexpectedGeneratedHtml("bare ampersand");
+    return GENERATED_ENTITIES[name];
+  });
 }
 
 function applyGeneratedAttributes(element: Element, tag: string, attrs: string): void {
@@ -1167,11 +848,11 @@ function applyGeneratedAttributes(element: Element, tag: string, attrs: string):
 /**
  * Build DOM nodes from renderer output without an HTML parser. Accepts only
  * the closed grammar the renderers emit; anything else throws
- * UnexpectedGeneratedHtml. Literal source `<` / `&` must arrive as sentinels.
+ * UnexpectedGeneratedHtml.
  *
  * @internal Exported for tests.
  */
-export function buildGeneratedFragment(html: string, doc: Document, sentinels: TextSentinels): DocumentFragment {
+export function buildGeneratedFragment(html: string, doc: Document): DocumentFragment {
   const fragment = doc.createDocumentFragment();
   const open: Element[] = [];
   let i = 0;
@@ -1179,7 +860,7 @@ export function buildGeneratedFragment(html: string, doc: Document, sentinels: T
     const parent: Node = open.length ? open[open.length - 1] : fragment;
     const lt = html.indexOf("<", i);
     const textEnd = lt < 0 ? html.length : lt;
-    if (textEnd > i) parent.appendChild(doc.createTextNode(decodeGeneratedText(html.slice(i, textEnd), sentinels)));
+    if (textEnd > i) parent.appendChild(doc.createTextNode(decodeGeneratedText(html.slice(i, textEnd))));
     if (lt < 0) break;
 
     GENERATED_TAG_RE.lastIndex = lt;
@@ -1208,13 +889,19 @@ export function buildGeneratedFragment(html: string, doc: Document, sentinels: T
  */
 function renderTextAsFragment(text: string, doc: Document): DocumentFragment | null {
   if (!hasRuby(text)) return null;
-  const sentinels = pickTextSentinels(text);
-  if (!sentinels) return null;
-  const encoded = text.replaceAll("<", sentinels.lt).replaceAll("&", sentinels.amp);
-  const html = renderMarkupHtml(encoded, sentinels.lt + sentinels.amp);
-  if (html === encoded) return null;
+  const models = findInlineAnnotationModels(text).filter((model) => model.base.raw);
+  if (!models.length) return null;
+  const fragment = doc.createDocumentFragment();
+  let end = 0;
   try {
-    return buildGeneratedFragment(html, doc, sentinels);
+    for (const model of models) {
+      if (model.start > end) fragment.append(text.slice(end, model.start));
+      fragment.append(buildGeneratedFragment(renderInlineAnnotationModelToHtml(model), doc));
+      end = model.end;
+    }
+    if (end < text.length) fragment.append(text.slice(end));
+    fragment.normalize();
+    return fragment;
   } catch (error) {
     if (error instanceof UnexpectedGeneratedHtml) return null;
     throw error;

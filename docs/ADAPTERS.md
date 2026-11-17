@@ -29,7 +29,9 @@ Choose the profile that matches the host's real parsing boundary.
 Use this when the host exposes the original inline source before conflicting
 Markdown rules consume it. The markdown-it plugin is the reference profile.
 Run the Inline Annotation rule at a deliberate precedence, stop at host-owned
-constructs, and let the host parse surrounding Markdown normally.
+constructs, and let the host parse surrounding Markdown normally. The
+[Marked adapter](../packages/marked/) uses this profile and masks slot delimiters
+while Marked pairs the surrounding emphasis markers.
 
 ### Source-backed AST rewrite
 
@@ -49,8 +51,7 @@ text and then replace it without restoring node ownership.
 
 ### Independent parser
 
-Use this only when the host language or runtime cannot consume the shared core,
-as in Logseq. Run the portable model and rendering corpora, document host parser
+Use this only when the host language or runtime cannot consume the shared core. Run the portable model and rendering corpora, document host parser
 conflicts, and keep any vendored fixtures traceable to their core release.
 
 ### Thin delegation

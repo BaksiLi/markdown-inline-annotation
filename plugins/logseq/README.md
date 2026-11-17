@@ -8,8 +8,8 @@ bouten, overlines, and underlines using `[base]^^(ruby)` and
 
 The portable grammar and `ia-*` HTML class contract live in the
 [Inline Annotation spec](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md).
-This plugin keeps an independent parser plus Logseq-specific macros and
-conversion commands.
+The plugin bundles the shared parser for inline markup and supplies the
+Logseq macros, conversion commands, and live DOM rendering.
 
 ## Syntax
 
