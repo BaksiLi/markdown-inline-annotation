@@ -1,3 +1,8 @@
+> **Moved:** Inline Annotation is now maintained at [BaksiLi/markdown-inline-annotation](https://github.com/BaksiLi/markdown-inline-annotation), in [`plugins/obsidian`](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/plugins/obsidian).
+>
+> The official plugin directory still uses this repository as its update endpoint. It remains active until that entry has migrated; source development takes place only in the monorepo.
+> Package names and plugin IDs are unchanged. See [MIGRATION.md](MIGRATION.md).
+
 # Inline Ruby Annotation for Obsidian
 
 Render Inline Annotation syntax as ruby/furigana, over/under glosses, bouten,
