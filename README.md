@@ -9,7 +9,11 @@ The specification, parser, shared conformance corpus, and editor integrations li
 [（半）形式的產物]^^((semi-)formal artefact)
 ```
 
-The syntax is **v2**. Product versions follow one release line, currently **0.8.0**.
+The syntax is **v2**. Product versions follow one release line, currently **0.8.1**.
+
+This is the continuation of the original Obsidian Inline Annotation repository,
+expanded into a shared home for the specification and every integration.
+Existing Obsidian releases and the repository's community history are preserved.
 
 ## Specification and integrations
 

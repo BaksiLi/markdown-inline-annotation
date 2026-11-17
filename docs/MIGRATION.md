@@ -1,8 +1,21 @@
 # Monorepo migration
 
 The unified repository is `BaksiLi/markdown-inline-annotation`. Syntax stays v2.
-All products use the 0.8.0 release line; public package and plugin identities are unchanged.
+All products use the 0.8.1 release line; public package and plugin identities are unchanged.
 Sätteri remains an unpublished pilot.
+
+## Repository continuity
+
+The monorepo continues the existing `BaksiLi/obsidian-inline-annotation` GitHub
+repository (repository ID `1254119943`), renamed to `markdown-inline-annotation`.
+Its stars, issues, original release tags, and published Obsidian assets stay with
+the same repository. The already prepared monorepo history is merged into that
+repository without replacing its history.
+
+The short-lived new repository is retained as
+`BaksiLi/markdown-inline-annotation-migration`, a migration snapshot rather than
+a second development home. Its 0.8.0 release attempt remained an unpublished draft;
+0.8.1 is the first unified release.
 
 ## History
 
@@ -26,8 +39,12 @@ Old release tags are retained as `history/markdown-it/*`, `history/logseq/*`,
 - Logseq keeps `logseq-furigana-ruby` and `_baksili_logseq-furigana-ruby`. Each release includes `logseq-furigana-ruby.zip`; the root icon serves the marketplace listing.
 - VS Code keeps publisher `baksili` and extension name `vscode-inline-annotation`. The VSIX includes the real core runtime rather than workspace symlinks.
 
-The Obsidian and Logseq directory entries must point to the new repository before
-archiving their former update endpoints. GitHub archive mode prevents future releases;
+The former Obsidian repository is the monorepo itself and must not be archived.
+Its old URL redirects to the same repository; do not recreate a repository under
+that old name, which would replace the redirect. The Obsidian directory should
+still be updated to the canonical name, and its update URLs must be verified.
+The Logseq directory entry must point to the monorepo before archiving its former
+update endpoint. GitHub archive mode prevents future releases;
 archived repositories cannot act as ongoing release mirrors. Historical releases remain
 available for older installations. `npm run release:status` checks the live entries.
 

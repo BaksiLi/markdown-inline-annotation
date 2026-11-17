@@ -1,7 +1,8 @@
 Inline Annotation now has one home: `BaksiLi/markdown-inline-annotation`.
 
 - One workspace, lockfile, conformance corpus, and release workflow for all five integrations.
-- The public npm, Logseq, Obsidian, and VS Code products share version **0.8.0**.
+- The public npm, Logseq, Obsidian, and VS Code products share version **0.8.1**.
+- The original Obsidian repository becomes the shared home, preserving its stars, issues, and historical releases.
 - Existing npm package names, plugin IDs, and the dependency-free `/core` API are preserved.
 - Syntax remains **v2**, including balanced annotation parentheses.
 - Satteri remains a source-available pilot; this release does not publish it to npm.

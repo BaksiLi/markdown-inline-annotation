@@ -1,0 +1,119 @@
+import assert from "node:assert/strict";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { test } from "node:test";
+
+const fakeGh = `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+const state = JSON.parse(fs.readFileSync(process.env.RELEASE_TEST_STATE, "utf8"));
+state.calls.push(args);
+const save = () => fs.writeFileSync(process.env.RELEASE_TEST_STATE, JSON.stringify(state));
+if (args[0] === "api" && args.includes("--slurp")) {
+  save();
+  if (state.lookupFails) { console.error("HTTP 403"); process.exit(1); }
+  process.stdout.write(JSON.stringify([state.release ? [state.release] : []]));
+} else if (args[0] === "release" && args[1] === "create") {
+  state.release = { tag_name: args[2], draft: true, assets: [] };
+  save();
+} else if (args[0] === "release" && args[1] === "upload") {
+  const path = args[3];
+  const name = require("node:path").basename(path);
+  state.release.assets.push({ id: name, name });
+  state.bytes[name] = fs.readFileSync(path).toString("base64");
+  save();
+} else if (args[0] === "api" && args[1].includes("/releases/assets/")) {
+  save();
+  process.stdout.write(Buffer.from(state.bytes[args[1].split("/").pop()], "base64"));
+} else if (args[0] === "release" && args[1] === "edit") {
+  state.release.draft = false;
+  save();
+} else {
+  save();
+  console.error("Unexpected gh call", args);
+  process.exit(1);
+}
+`;
+
+function fixture(t, overrides = {}) {
+  const directory = mkdtempSync(resolve(tmpdir(), "inline-annotation-publish-test-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  for (const name of ["scripts", "artifacts", "bin"]) {
+    mkdirSync(resolve(directory, name));
+  }
+  for (const name of ["publish.mjs", "lib.mjs"]) {
+    copyFileSync(new URL(name, import.meta.url), resolve(directory, "scripts", name));
+  }
+  writeFileSync(resolve(directory, "package.json"), '{"version":"0.8.1"}');
+  writeFileSync(resolve(directory, "artifacts", "SHA256SUMS"), "verified checksum\n");
+  writeFileSync(resolve(directory, "artifacts", "main.js"), "verified build\n");
+  writeFileSync(resolve(directory, "bin", "gh"), fakeGh, { mode: 0o755 });
+  const statePath = resolve(directory, "state.json");
+  writeFileSync(statePath, JSON.stringify({ calls: [], bytes: {}, ...overrides }));
+  return {
+    directory,
+    read: () => JSON.parse(readFileSync(statePath, "utf8")),
+    write: (state) => writeFileSync(statePath, JSON.stringify(state)),
+    publish: () => spawnSync(process.execPath, [resolve(directory, "scripts", "publish.mjs")], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${resolve(directory, "bin")}:${process.env.PATH}`,
+        GITHUB_REF_TYPE: "tag",
+        GITHUB_REF_NAME: "0.8.1",
+        RELEASE_TEST_STATE: statePath,
+      },
+    }),
+  };
+}
+
+test("creates and finds a draft, uploads assets, and safely retries a published release", (t) => {
+  const f = fixture(t);
+  const first = f.publish();
+  assert.equal(first.status, 0, first.stderr);
+  const before = f.read();
+  assert.equal(before.release.draft, false);
+  assert.equal(before.release.assets.length, 2);
+  const second = f.publish();
+  assert.equal(second.status, 0, second.stderr);
+  const uploads = (state) => state.calls.filter((args) => args[1] === "upload").length;
+  assert.equal(uploads(f.read()), uploads(before));
+});
+
+test("resumes an existing draft without creating another release", (t) => {
+  const f = fixture(t, { release: { tag_name: "0.8.1", draft: true, assets: [] } });
+  const result = f.publish();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.read().calls.some((args) => args[1] === "create"), false);
+});
+
+test("refuses to replace an asset with different bytes", (t) => {
+  const f = fixture(t);
+  assert.equal(f.publish().status, 0);
+  const state = f.read();
+  state.bytes["main.js"] = Buffer.from("different build").toString("base64");
+  state.calls = [];
+  f.write(state);
+  const result = f.publish();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /differs/);
+  assert.equal(f.read().calls.some((args) => ["upload", "edit"].includes(args[1])), false);
+});
+
+test("fails closed on authentication errors instead of creating a release", (t) => {
+  const f = fixture(t, { lookupFails: true });
+  assert.notEqual(f.publish().status, 0);
+  assert.equal(f.read().calls.some((args) => args[0] === "release"), false);
+});
+
+test("refuses to publish a release containing an unexpected ZIP", (t) => {
+  const f = fixture(t, {
+    release: { tag_name: "0.8.1", draft: true, assets: [{ id: 1, name: "wrong.zip" }] },
+  });
+  const result = f.publish();
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /unexpected assets/);
+  assert.equal(f.read().calls.some((args) => args[1] === "edit"), false);
+});

@@ -12,17 +12,23 @@ assert.equal(process.env.GITHUB_REF_NAME, version, "Tag must match the shared pa
 const directory = resolve(root, "artifacts");
 const names = readdirSync(directory).sort();
 assert.ok(names.includes("SHA256SUMS"), "Run release:pack before publishing");
-const result = spawnSync("gh", ["api", `repos/${repo}/releases/tags/${version}`],
-  { encoding: "utf8" });
-let release;
-if (result.status === 0) {
-  release = JSON.parse(result.stdout);
-} else {
-  assert.match(result.stderr, /HTTP 404/, "Release lookup failed; refusing to assume it is absent");
+function findRelease() {
+  // The tag endpoint does not reliably find drafts; the authenticated list includes them.
+  const pages = JSON.parse(capture("gh",
+    ["api", "--paginate", "--slurp", `repos/${repo}/releases?per_page=100`]));
+  const matches = pages.flat().filter((item) => item.tag_name === version);
+  assert.ok(matches.length <= 1, `Multiple releases exist for ${version}`);
+  return matches[0];
+}
+let release = findRelease();
+if (!release) {
   run("gh", ["release", "create", version, "--repo", repo, "--verify-tag", "--draft",
     "--title", `Inline Annotation ${version}`, "--notes-file", "RELEASE_NOTES.md"]);
-  release = JSON.parse(capture("gh", ["api", `repos/${repo}/releases/tags/${version}`]));
+  release = findRelease();
 }
+assert.ok(release, `Cannot locate release ${version} after creation`);
+assert.deepEqual(release.assets.map((asset) => asset.name).filter((name) => !names.includes(name)),
+  [], "Release contains unexpected assets; refusing to publish an ambiguous bundle");
 for (const name of names) {
   const path = resolve(directory, name);
   const existing = release.assets.find((asset) => asset.name === name);
