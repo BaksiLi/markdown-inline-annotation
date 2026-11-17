@@ -1,0 +1,1190 @@
+/**
+ * Ruby (Furigana) parser implementing the proposal syntax.
+ *
+ * ## Supported Syntax
+ * - **Bracketed**: `[base]^^(annotation)` and `[base]^_(annotation)`
+ * - **Abbreviated**: `base^^(annotation)` and `base^_(annotation)`
+ * - **Multi-level**: `[base]^^(ann1|ann2)` pipe-separated levels (max 2)
+ * - **Chained**: `[base]^^(over)^_(under)` — mixed-operator only
+ * - **Bouten**: `[漢字]^^(..)` / `[漢字]^_(..)` — emphasis dots
+ * - **Both bouten**: `[漢字]^^(..)^_(..)` — dots above + below (ruby + text-emphasis)
+ * - **Line marks**: `[base]^^(.-)` / `[base]^_(.-)` — overline/underline
+ * - **Parentheses**: balanced literal parentheses inside annotations
+ * - **Escapes**: `\|`, `\(`, `\)`, `\]`, `\\` inside base/annotation
+ *
+ * Reference: https://blog.baksili.codes/markdown-ruby
+ */
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+type RubyOp = "^^" | "^_";
+
+const OP_REGEX = /\^(?:\^|_)\(/g;
+const BOUTEN_PATTERN = "..";
+const ABBREVIATED_BOUNDARY_CHARS = "[]()<>`*&!";
+const GENERATED_ANNOTATION_HTML_RE =
+  /<(?:ruby|span)\b[^>]*\bclass=(?:"[^"]*\bia-(?:ruby|bouten|underline|overline)\b[^"]*"|'[^']*\bia-(?:ruby|bouten|underline|overline)\b[^']*')/i;
+
+type UnderlineStyle = "solid" | "wavy" | "double";
+
+const UNDERLINE_STYLES: Record<string, UnderlineStyle> = {
+  ".-": "solid",
+  ".~": "wavy",
+  ".=": "double",
+};
+
+function getUnderlineStyle(pattern: string): UnderlineStyle | null {
+  return UNDERLINE_STYLES[pattern] ?? null;
+}
+
+function underlineClasses(style: UnderlineStyle): string {
+  if (style === "solid") return "ia-underline";
+  return `ia-underline ia-underline-${style}`;
+}
+
+function lineKeyword(op: RubyOp): "overline" | "underline" {
+  return op === "^^" ? "overline" : "underline";
+}
+
+function lineClasses(op: RubyOp, style: UnderlineStyle): string {
+  const keyword = lineKeyword(op);
+  if (style === "solid") return `ia-${keyword}`;
+  return `ia-${keyword} ia-${keyword}-${style}`;
+}
+
+function underlinePatternFromClasses(el: Element): string | null {
+  if (el.classList.contains("ia-underline-wavy")) return ".~";
+  if (el.classList.contains("ia-underline-double")) return ".=";
+  if (el.classList.contains("ia-underline")) return ".-";
+  return null;
+}
+
+function overlinePatternFromClasses(el: Element): string | null {
+  if (el.classList.contains("ia-overline-wavy")) return ".~";
+  if (el.classList.contains("ia-overline-double")) return ".=";
+  if (el.classList.contains("ia-overline")) return ".-";
+  return null;
+}
+
+function linePatternFromClasses(el: Element): { op: RubyOp; pattern: string } | null {
+  const over = overlinePatternFromClasses(el);
+  if (over) return { op: "^^", pattern: over };
+  const under = underlinePatternFromClasses(el);
+  if (under) return { op: "^_", pattern: under };
+  return null;
+}
+
+/** Direct-child query helpers (`:scope >` is unreliable in jsdom for nested ruby) */
+function directChildrenByTag(el: Element, tag: string): Element[] {
+  const upper = tag.toUpperCase();
+  return Array.from(el.children).filter((c) => c.tagName === upper);
+}
+function firstDirectChildByTag(el: Element, tag: string): Element | null {
+  const upper = tag.toUpperCase();
+  return Array.from(el.children).find((c) => c.tagName === upper) ?? null;
+}
+
+function isEscaped(input: string, i: number): boolean {
+  let backslashes = 0;
+  for (let j = i - 1; j >= 0 && input[j] === "\\"; j--) backslashes++;
+  return backslashes % 2 === 1;
+}
+
+function unescape(input: string): string {
+  return input.replace(/\\(.)/g, "$1");
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeMarkupBase(input: string): string {
+  return input.replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+}
+
+function escapeMarkupAnnotation(input: string): string {
+  return input.replace(/\\/g, "\\\\").replace(/[|()]/g, "\\$&");
+}
+
+function escapeMarkupAnnotationLevels(levels: string[]): string {
+  return levels.map(escapeMarkupAnnotation).join("|");
+}
+
+function formatRubyMarkup(base: string, op: RubyOp, annotation: string): string {
+  return `[${escapeMarkupBase(base)}]${op}(${escapeMarkupAnnotation(annotation)})`;
+}
+
+function formatRubyMarkupLevels(base: string, op: RubyOp, levels: string[]): string {
+  return `[${escapeMarkupBase(base)}]${op}(${escapeMarkupAnnotationLevels(levels)})`;
+}
+
+function escapeMacroAnnotation(input: string): string {
+  return input.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+}
+
+function formatMacroAnnotationLevels(levels: string[]): string {
+  return levels.map(escapeMacroAnnotation).join("|");
+}
+
+function hasRenderedAnnotationHtml(input: string): boolean {
+  return GENERATED_ANNOTATION_HTML_RE.test(input);
+}
+
+function escapedBaseHtml(input: string, allowRenderedAnnotationHtml = false): string {
+  const text = unescape(input);
+  return allowRenderedAnnotationHtml && hasRenderedAnnotationHtml(text) ? text : escapeHtml(text);
+}
+
+function splitByUnescapedPipe(input: string): string[] {
+  const out: string[] = [];
+  let buf = "";
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === "|" && !isEscaped(input, i)) {
+      out.push(buf);
+      buf = "";
+    } else {
+      buf += input[i];
+    }
+  }
+  out.push(buf);
+  return out;
+}
+
+function overflowAfterSecondUnescapedPipe(input: string): string {
+  let pipes = 0;
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === "|" && !isEscaped(input, i)) {
+      pipes++;
+      if (pipes === 2) return input.slice(i);
+    }
+  }
+  return "";
+}
+
+function findCloseParen(input: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < input.length; i++) {
+    if (input[i] === "\n" || input[i] === "\r") return -1;
+    if (input[i] === "(" && !isEscaped(input, i)) depth++;
+    if (input[i] === ")" && !isEscaped(input, i)) {
+      if (depth === 0) return i;
+      depth--;
+    }
+  }
+  return -1;
+}
+
+function findOpenBracket(input: string, closeBracketIdx: number): number {
+  for (let i = closeBracketIdx - 1; i >= 0; i--) {
+    if (input[i] === "\n" || input[i] === "\r") return -1;
+    if (input[i] === "[" && !isEscaped(input, i)) return i;
+  }
+  return -1;
+}
+
+function findAbbreviatedBaseStart(input: string, opStart: number): number {
+  let k = opStart - 1;
+  while (k >= 0) {
+    const ch = input[k];
+    if (/\s/.test(ch)) break;
+    if (ABBREVIATED_BOUNDARY_CHARS.includes(ch) && !isEscaped(input, k)) break;
+    k--;
+  }
+  return k + 1;
+}
+
+// ---------------------------------------------------------------------------
+// Inline style constants (for HTML portability outside Logseq)
+// ---------------------------------------------------------------------------
+
+const STYLE_BOUTEN_OVER = "text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right";
+const STYLE_BOUTEN_UNDER = "text-decoration:underline dotted;text-underline-offset:0.15em";
+const STYLE_RUBY_UNDER = "ruby-position:under";
+
+function underlineInlineStyle(style: UnderlineStyle): string {
+  let s = "text-decoration-line:underline;text-underline-offset:0.15em";
+  if (style === "wavy") s += ";text-decoration-style:wavy";
+  else if (style === "double") s += ";text-decoration-style:double";
+  return s;
+}
+
+function lineInlineStyle(op: RubyOp, style: UnderlineStyle): string {
+  if (op === "^_") return underlineInlineStyle(style);
+  let s = "text-decoration-line:overline";
+  if (style === "wavy") s += ";text-decoration-style:wavy";
+  else if (style === "double") s += ";text-decoration-style:double";
+  return s;
+}
+
+function boutenInlineStyle(op: RubyOp): string {
+  return op === "^^" ? STYLE_BOUTEN_OVER : STYLE_BOUTEN_UNDER;
+}
+
+/** Return ` style="..."` attr for under-positioned ruby, empty for over */
+function rubyPosAttr(pos: string): string {
+  return pos === "ia-ruby-under" ? ` style="${STYLE_RUBY_UNDER}"` : "";
+}
+
+/** Wrap a character in an empty-annotation ruby to preserve vertical spacing */
+function emptyRuby(char: string, pos: string): string {
+  return `<ruby class="ia-ruby ${pos}"${rubyPosAttr(pos)}>${char}<rp>(</rp><rt></rt><rp>)</rp></ruby>`;
+}
+
+// ---------------------------------------------------------------------------
+// Rendering helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Bouten rendering.
+ * - Over (^^): real CSS text-emphasis dots — works perfectly in Chromium.
+ * - Under (^_): dotted underline fallback — text-emphasis-position:under
+ *   is unreliably clipped by Logseq's Electron container. Dotted underline
+ *   is semantically close and renders stably.
+ */
+function renderBouten(base: string, op: RubyOp, allowRenderedBaseHtml = false): string {
+  const pos = op === "^^" ? "ia-bouten-over" : "ia-bouten-under";
+  return `<span class="ia-bouten ${pos}" style="${boutenInlineStyle(op)}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
+}
+
+function renderBoutenBoth(base: string, allowRenderedBaseHtml = false): string {
+  // Over = text-emphasis, Under = dotted underline, on the same element
+  return `<span class="ia-bouten ia-bouten-over ia-bouten-under" style="${STYLE_BOUTEN_OVER};${STYLE_BOUTEN_UNDER}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
+}
+
+function renderLine(base: string, op: RubyOp, style: UnderlineStyle = "solid", allowRenderedBaseHtml = false): string {
+  return `<span class="${lineClasses(op, style)}" style="${lineInlineStyle(op, style)}">${escapedBaseHtml(base, allowRenderedBaseHtml)}</span>`;
+}
+
+function renderLineBoth(base: string, first: { op: RubyOp; style: UnderlineStyle }, second: { op: RubyOp; style: UnderlineStyle }, allowRenderedBaseHtml = false): string {
+  const ordered = [first, second].sort((a, b) => (a.op === b.op ? 0 : a.op === "^^" ? -1 : 1));
+  let html = escapedBaseHtml(base, allowRenderedBaseHtml);
+  for (let i = ordered.length - 1; i >= 0; i--) {
+    const item = ordered[i];
+    html = `<span class="${lineClasses(item.op, item.style)}" style="${lineInlineStyle(item.op, item.style)}">${html}</span>`;
+  }
+  return html;
+}
+
+/**
+ * Render mixed: ruby annotation on one side + bouten/underline on the other
+ */
+function renderRubyWithBouten(base: string, rubyText: string, rubyOp: RubyOp, boutenOp: RubyOp, allowRenderedBaseHtml = false): string {
+  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
+  const rubyPos = rubyOp === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+  const boutenPos = boutenOp === "^^" ? "over" : "under";
+  const styles = [rubyPos === "ia-ruby-under" ? STYLE_RUBY_UNDER : "", boutenInlineStyle(boutenOp)].filter(Boolean).join(";");
+  return `<ruby class="ia-ruby ia-ruby-mixed ${rubyPos} ia-bouten-${boutenPos}" style="${styles}">${safeBase}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
+}
+
+function renderRubyWithLine(base: string, rubyText: string, rubyOp: RubyOp, lineOp: RubyOp, style: UnderlineStyle = "solid", allowRenderedBaseHtml = false): string {
+  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
+  const rubyPos = rubyOp === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+  const styles = [rubyPos === "ia-ruby-under" ? STYLE_RUBY_UNDER : "", lineInlineStyle(lineOp, style)].filter(Boolean).join(";");
+  return `<ruby class="ia-ruby ia-ruby-mixed ${rubyPos} ${lineClasses(lineOp, style)}" style="${styles}">${safeBase}<rp>(</rp><rt>${escapeHtml(rubyText)}</rt><rp>)</rp></ruby>`;
+}
+
+/**
+ * Split annotation by spaces, trimming each part
+ */
+function splitBySpaces(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean);
+}
+
+/**
+ * Count actual characters (not bytes) in a string
+ */
+function countCharacters(text: string): number {
+  return Array.from(text).length;
+}
+
+/**
+ * Check if annotation can be auto-hidden (matches base character)
+ */
+function shouldHideAnnotation(baseChar: string, annotation: string): boolean {
+  return baseChar === annotation;
+}
+
+function renderRuby(base: string, op: RubyOp, levels: string[], allowRenderedBaseHtml = false): string {
+  const safeBase = escapedBaseHtml(base, allowRenderedBaseHtml);
+  const capped = levels.slice(0, 2);
+  const baseChars = Array.from(unescape(base));
+
+  // --- Two levels: try per-character alignment independently for each level ---
+  if (capped.length === 2) {
+    const ann1Parts = capped[0].includes(" ") ? splitBySpaces(capped[0]) : null;
+    const ann2Parts = capped[1].includes(" ") ? splitBySpaces(capped[1]) : null;
+    const can1Align = ann1Parts !== null && ann1Parts.length === baseChars.length;
+    const can2Align = ann2Parts !== null && ann2Parts.length === baseChars.length;
+    const innerPos = op === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+    const outerPos = op === "^^" ? "ia-ruby-under" : "ia-ruby-over";
+
+    if (can1Align && can2Align) {
+      // Both levels per-character aligned
+      let result = "";
+      for (let i = 0; i < baseChars.length; i++) {
+        const char = baseChars[i];
+        const a1 = ann1Parts![i];
+        const a2 = ann2Parts![i];
+        const hide1 = shouldHideAnnotation(char, a1);
+        const hide2 = shouldHideAnnotation(char, a2);
+        if (hide1 && hide2) {
+          result += emptyRuby(escapeHtml(char), innerPos);
+        } else if (hide1) {
+          result += `<ruby class="ia-ruby ${outerPos}"${rubyPosAttr(outerPos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(a2)}</rt><rp>)</rp></ruby>`;
+        } else if (hide2) {
+          result += `<ruby class="ia-ruby ${innerPos}"${rubyPosAttr(innerPos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(a1)}</rt><rp>)</rp></ruby>`;
+        } else {
+          result += `<ruby class="ia-ruby ${outerPos} ia-ruby-double"${rubyPosAttr(outerPos)}><ruby class="ia-ruby ${innerPos}"${rubyPosAttr(innerPos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(a1)}</rt><rp>)</rp></ruby><rp>(</rp><rt>${escapeHtml(a2)}</rt><rp>)</rp></ruby>`;
+        }
+      }
+      return result;
+    }
+
+    if (can1Align) {
+      // First level per-character, second level group
+      let innerRubies = "";
+      for (let i = 0; i < baseChars.length; i++) {
+        const char = baseChars[i];
+        const ann = ann1Parts![i];
+        if (shouldHideAnnotation(char, ann)) {
+          innerRubies += emptyRuby(escapeHtml(char), innerPos);
+        } else {
+          innerRubies += `<ruby class="ia-ruby ${innerPos}"${rubyPosAttr(innerPos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(ann)}</rt><rp>)</rp></ruby>`;
+        }
+      }
+      return (
+        `<ruby class="ia-ruby ${outerPos} ia-ruby-double"${rubyPosAttr(outerPos)}>` +
+        innerRubies +
+        `<rp>(</rp><rt>${escapeHtml(capped[1])}</rt><rp>)</rp></ruby>`
+      );
+    }
+
+    if (can2Align) {
+      // First level group, second level per-character
+      let innerRubies = "";
+      for (let i = 0; i < baseChars.length; i++) {
+        const char = baseChars[i];
+        const ann = ann2Parts![i];
+        if (shouldHideAnnotation(char, ann)) {
+          innerRubies += emptyRuby(escapeHtml(char), outerPos);
+        } else {
+          innerRubies += `<ruby class="ia-ruby ${outerPos}"${rubyPosAttr(outerPos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(ann)}</rt><rp>)</rp></ruby>`;
+        }
+      }
+      return (
+        `<ruby class="ia-ruby ${innerPos} ia-ruby-double"${rubyPosAttr(innerPos)}>` +
+        innerRubies +
+        `<rp>(</rp><rt>${escapeHtml(capped[0])}</rt><rp>)</rp></ruby>`
+      );
+    }
+
+    // Neither can align: standard double-level group ruby
+    return (
+      `<ruby class="ia-ruby ${outerPos} ia-ruby-double"${rubyPosAttr(outerPos)}>` +
+      `<ruby class="ia-ruby ${innerPos}"${rubyPosAttr(innerPos)}>${safeBase}<rp>(</rp><rt>${escapeHtml(capped[0])}</rt><rp>)</rp></ruby>` +
+      `<rp>(</rp><rt>${escapeHtml(capped[1])}</rt><rp>)</rp></ruby>`
+    );
+  }
+
+  // --- Single level: try per-character alignment ---
+  if (capped.length === 1 && capped[0].includes(" ")) {
+    const annParts = splitBySpaces(capped[0]);
+    if (annParts.length === baseChars.length) {
+      let result = "";
+      const pos = op === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+      for (let i = 0; i < baseChars.length; i++) {
+        const char = baseChars[i];
+        const ann = annParts[i];
+        if (shouldHideAnnotation(char, ann)) {
+          result += emptyRuby(escapeHtml(char), pos);
+        } else {
+          result += `<ruby class="ia-ruby ${pos}"${rubyPosAttr(pos)}>${escapeHtml(char)}<rp>(</rp><rt>${escapeHtml(ann)}</rt><rp>)</rp></ruby>`;
+        }
+      }
+      return result;
+    }
+  }
+
+  // --- Fallback: standard group ruby ---
+  if (capped.length === 1) {
+    const pos = op === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+    return `<ruby class="ia-ruby ${pos}"${rubyPosAttr(pos)}>${safeBase}<rp>(</rp><rt>${escapeHtml(capped[0])}</rt><rp>)</rp></ruby>`;
+  }
+
+  // Two levels group: nested <ruby> (Chromium doesn't support <rtc>)
+  const innerPos = op === "^^" ? "ia-ruby-over" : "ia-ruby-under";
+  const outerPos = op === "^^" ? "ia-ruby-under" : "ia-ruby-over";
+  return (
+    `<ruby class="ia-ruby ${outerPos} ia-ruby-double"${rubyPosAttr(outerPos)}>` +
+    `<ruby class="ia-ruby ${innerPos}"${rubyPosAttr(innerPos)}>${safeBase}<rp>(</rp><rt>${escapeHtml(capped[0])}</rt><rp>)</rp></ruby>` +
+    `<rp>(</rp><rt>${escapeHtml(capped[1])}</rt><rp>)</rp></ruby>`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Code protection — skip content inside backtick code in block strings
+// ---------------------------------------------------------------------------
+
+interface ProtectedContent {
+  result: string;
+  tokens: string[];
+}
+
+function protectCode(content: string): ProtectedContent {
+  const tokens: string[] = [];
+  // Protect fenced code blocks (```...```) and inline code (`...`)
+  // Use \uE000 (PUA char) as sentinel — survives DOMParser unlike \x00
+  const result = content.replace(/```[\s\S]*?```|`[^`]+`/g, (match) => {
+    const idx = tokens.length;
+    tokens.push(match);
+    return `\uE000CODE${idx}\uE000`;
+  });
+  return { result, tokens };
+}
+
+function restoreCode(content: string, tokens: string[]): string {
+  let result = content;
+  for (let i = 0; i < tokens.length; i++) {
+    result = result.split(`\uE000CODE${i}\uE000`).join(tokens[i]);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+export function hasRuby(text: string): boolean {
+  return text.includes("^^(") || text.includes("^_(");
+}
+
+/** True if the string contains rendered Inline Annotation HTML (ruby, bouten, or underline). */
+function hasAnnotationHtml(text: string): boolean {
+  return /<ruby\b/i.test(text) || GENERATED_ANNOTATION_HTML_RE.test(text);
+}
+
+export function hasAnyRubyContent(text: string): boolean {
+  return hasRuby(text) || hasAnnotationHtml(text) || text.includes("{{renderer :ruby");
+}
+
+const MACRO_RE = /\{\{renderer\s+:ruby,\s*([^,}]+),\s*([^,}]+)(?:,\s*([^}]+))?\}\}/g;
+
+/**
+ * Convert `^^()` / `^_()` markup to HTML (single pass).
+ */
+function rubyToHTMLPass(input: string, allowRenderedBaseHtml: boolean): string {
+  if (!hasRuby(input)) return input;
+
+  let out = "";
+  let i = 0;
+
+  while (i < input.length) {
+    OP_REGEX.lastIndex = i;
+    const m = OP_REGEX.exec(input);
+    if (!m) {
+      out += input.slice(i);
+      break;
+    }
+
+    const opStart = m.index;
+    const op: RubyOp = input[opStart + 1] === "^" ? "^^" : "^_";
+
+    let baseStart = -1;
+    let baseHtml = "";
+    const consumedFrom = i;
+
+    if (opStart > 0 && input[opStart - 1] === "]" && !isEscaped(input, opStart - 1)) {
+      const open = findOpenBracket(input, opStart - 1);
+      // Skip brackets that were already consumed (nested bracket support)
+      if (open >= 0 && open >= consumedFrom) {
+        baseStart = open;
+        baseHtml = input.slice(open + 1, opStart - 1);
+      }
+    } else {
+      baseStart = findAbbreviatedBaseStart(input, opStart);
+      baseHtml = input.slice(baseStart, opStart);
+    }
+
+    if (baseStart < consumedFrom || baseStart < 0 || baseHtml.length === 0) {
+      out += input.slice(i, opStart + 1);
+      i = opStart + 1;
+      continue;
+    }
+
+    const annStart = opStart + 3;
+    const annEnd = findCloseParen(input, annStart);
+    if (annEnd < 0) {
+      out += input.slice(i, opStart + 1);
+      i = opStart + 1;
+      continue;
+    }
+
+    const rawAnn = input.slice(annStart, annEnd);
+    if (rawAnn.length === 0) {
+      out += input.slice(i, annEnd + 1);
+      i = annEnd + 1;
+      continue;
+    }
+
+    // --- Chained second operator (mixed only) ---
+    let finalEnd = annEnd + 1;
+    let rawAnn2: string | null = null;
+    let op2: RubyOp | null = null;
+    const next = annEnd + 1;
+
+    if (
+      next + 2 < input.length &&
+      input[next] === "^" &&
+      (input[next + 1] === "^" || input[next + 1] === "_") &&
+      input[next + 2] === "("
+    ) {
+      const nextOp: RubyOp = input[next + 1] === "^" ? "^^" : "^_";
+      if (nextOp !== op) {
+        const annStart2 = next + 3;
+        const annEnd2 = findCloseParen(input, annStart2);
+        if (annEnd2 >= 0) {
+          const candidate = input.slice(annStart2, annEnd2);
+          if (candidate.length > 0) {
+            rawAnn2 = candidate;
+            op2 = nextOp;
+            finalEnd = annEnd2 + 1;
+          }
+        }
+      }
+    }
+
+    // If first annotation already has pipe-separated levels (filling both positions),
+    // leave the chained operator in the stream as visible over-capacity text.
+    if (rawAnn2 !== null && splitByUnescapedPipe(rawAnn).length > 1) {
+      rawAnn2 = null;
+      op2 = null;
+      finalEnd = annEnd + 1;
+    }
+
+    // --- Special pattern detection ---
+    const isBouten1 = rawAnn === BOUTEN_PATTERN;
+    const isBouten2 = rawAnn2 === BOUTEN_PATTERN;
+    const lineStyle1 = getUnderlineStyle(rawAnn);
+    const lineStyle2 = getUnderlineStyle(rawAnn2 ?? "");
+    const isLine1 = lineStyle1 !== null;
+    const isLine2 = lineStyle2 !== null;
+    const isSpecial1 = isBouten1 || isLine1;
+    const isSpecial2 = isBouten2 || isLine2;
+
+    // --- Case 1: BOTH are special patterns ---
+    if (isSpecial1 && isSpecial2) {
+      out += input.slice(consumedFrom, baseStart);
+      
+      // Bouten + line combination
+      if ((isBouten1 && isLine2) || (isLine1 && isBouten2)) {
+        const boutenOp = isBouten1 ? op : op2;
+        const lineOp = isLine1 ? op : op2!;
+        const lineStyle = isLine1 ? lineStyle1! : lineStyle2!;
+        const comboStyle = [boutenInlineStyle(boutenOp!), lineInlineStyle(lineOp, lineStyle)].join(";");
+        out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, lineStyle)}" style="${comboStyle}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
+      }
+      // Bouten + Bouten (both dots)
+      else if (isBouten1 && isBouten2) {
+        out += renderBoutenBoth(baseHtml, allowRenderedBaseHtml);
+      }
+      // Line + line: preserve both sides when they differ.
+      else {
+        out += op2 && op2 !== op
+          ? renderLineBoth(baseHtml, { op, style: lineStyle1! }, { op: op2, style: lineStyle2! }, allowRenderedBaseHtml)
+          : renderLine(baseHtml, op, lineStyle1!, allowRenderedBaseHtml);
+      }
+      
+      i = finalEnd;
+      continue;
+    }
+
+    // --- Case 2: ONLY first is special pattern (no chain) ---
+    if (isSpecial1 && !rawAnn2) {
+      out += input.slice(consumedFrom, baseStart);
+      
+      if (isBouten1) {
+        out += renderBouten(baseHtml, op, allowRenderedBaseHtml);
+      } else {
+        out += renderLine(baseHtml, op, lineStyle1!, allowRenderedBaseHtml);
+      }
+      
+      i = annEnd + 1;
+      continue;
+    }
+
+    // --- Case 3: Mixed special pattern + regular ruby text ---
+    if (rawAnn2 && (isSpecial1 || isSpecial2)) {
+      out += input.slice(consumedFrom, baseStart);
+      
+      // One is special, one is regular text
+      if (isSpecial1 && !isSpecial2) {
+        // First is special (bouten/underline), second is ruby text
+        const rubyText = unescape(rawAnn2);
+        if (isBouten1) {
+          out += renderRubyWithBouten(baseHtml, rubyText, op2!, op, allowRenderedBaseHtml);
+        } else {
+          out += renderRubyWithLine(baseHtml, rubyText, op2!, op, lineStyle1!, allowRenderedBaseHtml);
+        }
+      } else if (!isSpecial1 && isSpecial2) {
+        // First is ruby text, second is special (bouten/underline)
+        const rubyText = unescape(rawAnn);
+        if (isBouten2) {
+          out += renderRubyWithBouten(baseHtml, rubyText, op, op2!, allowRenderedBaseHtml);
+        } else {
+          out += renderRubyWithLine(baseHtml, rubyText, op, op2!, lineStyle2!, allowRenderedBaseHtml);
+        }
+      }
+      
+      i = finalEnd;
+      continue;
+    }
+
+    // --- Case 4: Regular ruby (both are normal text) ---
+    const rawLevels = splitByUnescapedPipe(rawAnn);
+    const levels = rawLevels.map(unescape);
+    const overflowHtml = rawAnn2 ? "" : escapeHtml(unescape(overflowAfterSecondUnescapedPipe(rawAnn)));
+    if (rawAnn2) {
+      levels.push(...splitByUnescapedPipe(rawAnn2).map(unescape));
+    }
+
+    // Detect special patterns in pipe-separated levels
+    if (levels.length === 2 && !rawAnn2) {
+      const innerOp = op;
+      const outerOp: RubyOp = op === "^^" ? "^_" : "^^";
+
+      const isInnerBouten = rawLevels[0] === BOUTEN_PATTERN;
+      const isOuterBouten = rawLevels[1] === BOUTEN_PATTERN;
+      const innerLineStyle = getUnderlineStyle(rawLevels[0]);
+      const outerLineStyle = getUnderlineStyle(rawLevels[1]);
+      const isInnerLine = innerLineStyle !== null;
+      const isOuterLine = outerLineStyle !== null;
+      const isInnerSpecial = isInnerBouten || isInnerLine;
+      const isOuterSpecial = isOuterBouten || isOuterLine;
+
+      if (isInnerSpecial || isOuterSpecial) {
+        out += input.slice(consumedFrom, baseStart);
+
+        if (isInnerSpecial && isOuterSpecial) {
+          if (isInnerBouten && isOuterBouten) {
+            out += renderBoutenBoth(baseHtml, allowRenderedBaseHtml);
+          } else if ((isInnerBouten || isOuterBouten) && (isInnerLine || isOuterLine)) {
+            const boutenOp = isInnerBouten ? innerOp : outerOp;
+            const lineOp = isInnerLine ? innerOp : outerOp;
+            const pipeLineStyle = isInnerLine ? innerLineStyle! : outerLineStyle!;
+            const comboStyle2 = [boutenInlineStyle(boutenOp), lineInlineStyle(lineOp, pipeLineStyle)].join(";");
+            out += `<span class="ia-bouten ia-bouten-${boutenOp === "^^" ? "over" : "under"} ${lineClasses(lineOp, pipeLineStyle)}" style="${comboStyle2}">${escapedBaseHtml(baseHtml, allowRenderedBaseHtml)}</span>`;
+          } else {
+            out += renderLineBoth(baseHtml, { op: innerOp, style: innerLineStyle! }, { op: outerOp, style: outerLineStyle! }, allowRenderedBaseHtml);
+          }
+        } else if (isInnerSpecial) {
+          if (isInnerBouten) {
+            out += renderRubyWithBouten(baseHtml, levels[1], outerOp, innerOp, allowRenderedBaseHtml);
+          } else {
+            out += renderRubyWithLine(baseHtml, levels[1], outerOp, innerOp, innerLineStyle!, allowRenderedBaseHtml);
+          }
+        } else {
+          if (isOuterBouten) {
+            out += renderRubyWithBouten(baseHtml, levels[0], innerOp, outerOp, allowRenderedBaseHtml);
+          } else {
+            out += renderRubyWithLine(baseHtml, levels[0], innerOp, outerOp, outerLineStyle!, allowRenderedBaseHtml);
+          }
+        }
+
+        out += overflowHtml;
+        i = finalEnd;
+        continue;
+      }
+    }
+
+    out += input.slice(consumedFrom, baseStart);
+    out += renderRuby(baseHtml, op, levels, allowRenderedBaseHtml) + overflowHtml;
+    i = finalEnd;
+  }
+
+  return out;
+}
+
+/**
+ * Convert `^^()` / `^_()` markup to HTML.
+ * Runs multiple passes to support nested bracket expressions.
+ */
+export function rubyToHTML(input: string): string {
+  if (!hasRuby(input)) return input;
+  let result = input;
+  for (let pass = 0; pass < 5; pass++) {
+    const next = rubyToHTMLPass(result, pass > 0);
+    if (next === result) break;
+    result = next;
+    if (!hasRuby(result)) break;
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Conversion: any ruby format → markup (code-safe)
+// ---------------------------------------------------------------------------
+
+export function anyToMarkup(content: string): string {
+  const { result: safe, tokens } = protectCode(content);
+  let result = safe;
+
+  // Macros → markup
+  MACRO_RE.lastIndex = 0;
+  result = result.replace(MACRO_RE, (_match, base, ann, pos) => {
+    const b = (base ?? "").trim();
+    const a = (ann ?? "").trim();
+    if (!b || !a) return _match;
+    const p = (pos ?? "").trim().toLowerCase();
+    const op = p === "under" ? "^_" : "^^";
+    return formatRubyMarkupLevels(b, op, splitByUnescapedPipe(a).map(unescape));
+  });
+
+  // HTML → markup
+  if (hasAnnotationHtml(result)) {
+    result = rubyHtmlToMarkup(result);
+  }
+
+  return restoreCode(result, tokens);
+}
+
+// ---------------------------------------------------------------------------
+// Conversion: any ruby format → macro (code-safe)
+// ---------------------------------------------------------------------------
+
+export function anyToMacro(content: string): string {
+  const { result: safe, tokens } = protectCode(content);
+  let result = safe;
+
+  // Markup → macro
+  if (hasRuby(result)) {
+    result = markupToMacro(result);
+  }
+
+  // HTML → macro
+  if (hasAnnotationHtml(result)) {
+    const doc = new DOMParser().parseFromString(`<div>${result}</div>`, "text/html");
+    const root = doc.body.firstElementChild as HTMLElement | null;
+    if (root) {
+      htmlElementsToMacro(root);
+      result = root.innerHTML;
+    }
+  }
+
+  return restoreCode(result, tokens);
+}
+
+function markupToMacro(input: string): string {
+  if (!hasRuby(input)) return input;
+
+  let out = "";
+  let i = 0;
+
+  while (i < input.length) {
+    OP_REGEX.lastIndex = i;
+    const m = OP_REGEX.exec(input);
+    if (!m) {
+      out += input.slice(i);
+      break;
+    }
+
+    const opStart = m.index;
+    const op: RubyOp = input[opStart + 1] === "^" ? "^^" : "^_";
+
+    let baseStart = -1;
+    let baseHtml = "";
+    const consumedFrom = i;
+
+    if (opStart > 0 && input[opStart - 1] === "]" && !isEscaped(input, opStart - 1)) {
+      const open = findOpenBracket(input, opStart - 1);
+      if (open >= 0 && open >= consumedFrom) {
+        baseStart = open;
+        baseHtml = input.slice(open + 1, opStart - 1);
+      }
+    } else {
+      baseStart = findAbbreviatedBaseStart(input, opStart);
+      baseHtml = input.slice(baseStart, opStart);
+    }
+
+    if (baseStart < consumedFrom || baseStart < 0 || baseHtml.length === 0) {
+      out += input.slice(i, opStart + 1);
+      i = opStart + 1;
+      continue;
+    }
+
+    const annStart = opStart + 3;
+    const annEnd = findCloseParen(input, annStart);
+    if (annEnd < 0) {
+      out += input.slice(i, opStart + 1);
+      i = opStart + 1;
+      continue;
+    }
+
+    const rawAnn = input.slice(annStart, annEnd);
+    if (rawAnn.length === 0) {
+      out += input.slice(i, annEnd + 1);
+      i = annEnd + 1;
+      continue;
+    }
+
+    let finalEnd = annEnd + 1;
+    let rawAnn2: string | null = null;
+    let op2: RubyOp | null = null;
+    const next = annEnd + 1;
+
+    if (
+      next + 2 < input.length &&
+      input[next] === "^" &&
+      (input[next + 1] === "^" || input[next + 1] === "_") &&
+      input[next + 2] === "("
+    ) {
+      const nextOp: RubyOp = input[next + 1] === "^" ? "^^" : "^_";
+      if (nextOp !== op) {
+        const annStart2 = next + 3;
+        const annEnd2 = findCloseParen(input, annStart2);
+        if (annEnd2 >= 0) {
+          const candidate = input.slice(annStart2, annEnd2);
+          if (candidate.length > 0) {
+            rawAnn2 = candidate;
+            op2 = nextOp;
+            finalEnd = annEnd2 + 1;
+          }
+        }
+      }
+    }
+
+    if (rawAnn2 !== null && splitByUnescapedPipe(rawAnn).length > 1) {
+      rawAnn2 = null;
+      op2 = null;
+      finalEnd = annEnd + 1;
+    }
+
+    const base = unescape(baseHtml);
+    const levels = splitByUnescapedPipe(rawAnn).map(unescape);
+    if (rawAnn2 && op2) {
+      levels.push(...splitByUnescapedPipe(rawAnn2).map(unescape));
+    }
+    const ann = formatMacroAnnotationLevels(levels);
+    const posArg = op === "^_" ? ", under" : "";
+
+    out += input.slice(consumedFrom, baseStart);
+    out += `{{renderer :ruby, ${base}, ${ann}${posArg}}}`;
+    i = finalEnd;
+  }
+
+  return out;
+}
+
+function htmlElementsToMacro(root: HTMLElement): void {
+  let rubies = Array.from(root.querySelectorAll("ruby"));
+  while (rubies.length > 0) {
+    for (const ruby of rubies) {
+      if (!ruby.parentNode) continue;
+
+      // Mixed ruby — macro only preserves ruby text (decoration lost)
+      if (ruby.classList.contains("ia-ruby-mixed")) {
+        const baseClone = ruby.cloneNode(true) as HTMLElement;
+        baseClone.querySelectorAll("rt, rp").forEach((n) => n.remove());
+        const base = (baseClone.textContent ?? "").trim();
+        const rt = firstDirectChildByTag(ruby, "rt");
+        const rubyText = rt ? (rt.textContent ?? "").trim() : "";
+        if (!base || !rubyText) continue;
+        const posArg = ruby.classList.contains("ia-ruby-under") ? ", under" : "";
+        ruby.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ${rubyText}${posArg}}}`));
+        continue;
+      }
+
+      const innerRuby = firstDirectChildByTag(ruby, "ruby");
+      if (innerRuby) {
+        const outerRts = directChildrenByTag(ruby, "rt").map(
+          (rt) => (rt.textContent ?? "").trim()
+        ).filter(Boolean);
+        const innerClone = innerRuby.cloneNode(true) as HTMLElement;
+        innerClone.querySelectorAll("rt, rp").forEach((n) => n.remove());
+        const base = (innerClone.textContent ?? "").trim();
+        const innerRts = directChildrenByTag(innerRuby, "rt").map(
+          (rt) => (rt.textContent ?? "").trim()
+        ).filter(Boolean);
+        const levels = [...innerRts, ...outerRts].filter(Boolean);
+        const ann = levels.join("|");
+        const posArg = innerRuby.classList.contains("ia-ruby-under") ? ", under" : "";
+        if (ann) ruby.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ${ann}${posArg}}}`));
+        continue;
+      }
+
+      const baseClone = ruby.cloneNode(true) as HTMLElement;
+      baseClone.querySelectorAll("rt, rp, rtc").forEach((n) => n.remove());
+      const base = (baseClone.textContent ?? "").trim();
+      const rts = directChildrenByTag(ruby, "rt").map(
+        (rt) => (rt.textContent ?? "").trim()
+      );
+      const rtcs = directChildrenByTag(ruby, "rtc").map(
+        (rtc) => (rtc.textContent ?? "").trim()
+      );
+      const levels = [...rts, ...rtcs].filter(Boolean);
+      const ann = levels.join("|");
+      const posArg = ruby.classList.contains("ia-ruby-under") ? ", under" : "";
+      if (ann) ruby.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ${ann}${posArg}}}`));
+    }
+    rubies = Array.from(root.querySelectorAll("ruby"));
+  }
+
+  for (const span of Array.from(root.querySelectorAll("span.ia-bouten"))) {
+    const base = (span.textContent ?? "").trim();
+    const isOver = span.classList.contains("ia-bouten-over");
+    const isUnder = span.classList.contains("ia-bouten-under");
+    const line = linePatternFromClasses(span);
+    
+    // Note: Macro format doesn't support bouten + underline combo directly,
+    // so we convert to the primary effect (bouten)
+    if (line) {
+      // For bouten + underline, prioritize the bouten in macro format
+      const pos = isUnder ? ", under" : "";
+      span.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ..${pos}}}`));
+    } else {
+      const pos = isUnder ? ", under" : "";
+      span.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ..${pos}}}`));
+    }
+  }
+
+  for (const span of Array.from(root.querySelectorAll("span.ia-underline:not(.ia-bouten), span.ia-overline:not(.ia-bouten)"))) {
+    const base = (span.textContent ?? "").trim();
+    const line = linePatternFromClasses(span) ?? { op: "^_" as RubyOp, pattern: ".-" };
+    const pos = line.op === "^_" ? ", under" : "";
+    span.replaceWith(root.ownerDocument.createTextNode(`{{renderer :ruby, ${base}, ${line.pattern}${pos}}}`));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Conversion: any ruby format → HTML (code-safe)
+// ---------------------------------------------------------------------------
+
+export function anyToHTML(content: string): string {
+  const { result: safe, tokens } = protectCode(content);
+  let result = safe;
+
+  // Macros → HTML
+  MACRO_RE.lastIndex = 0;
+  result = result.replace(MACRO_RE, (_match, base, ann, pos) => {
+    const args = [":ruby", base, ann];
+    if (pos) args.push(pos);
+    return renderMacroRuby(args) ?? _match;
+  });
+
+  // Markup → HTML
+  if (hasRuby(result)) {
+    result = rubyToHTML(result);
+  }
+
+  return restoreCode(result, tokens);
+}
+
+// ---------------------------------------------------------------------------
+// Conversion: HTML/bouten/underline → markup (best-effort)
+// ---------------------------------------------------------------------------
+
+export function rubyHtmlToMarkup(html: string): string {
+  if (!hasAnnotationHtml(html)) return html;
+
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild as HTMLElement | null;
+  if (!root) return html;
+
+  // Process rubies (handle nested double-level: outer wraps inner)
+  // Iterate until no more rubies remain (inner ones get converted first)
+  let rubies = Array.from(root.querySelectorAll("ruby"));
+  while (rubies.length > 0) {
+    for (const ruby of rubies) {
+      if (!ruby.parentNode) continue;
+
+      // Mixed ruby (ruby + bouten/underline)?
+      if (ruby.classList.contains("ia-ruby-mixed")) {
+        const baseClone = ruby.cloneNode(true) as HTMLElement;
+        baseClone.querySelectorAll("rt, rp").forEach((n) => n.remove());
+        const base = (baseClone.textContent ?? "").trim();
+        const rt = firstDirectChildByTag(ruby, "rt");
+        const rubyText = rt ? (rt.textContent ?? "").trim() : "";
+        if (!base || !rubyText) continue;
+        const rubyOp = ruby.classList.contains("ia-ruby-over") ? "^^" : "^_";
+        const line = linePatternFromClasses(ruby);
+        const isBoutenOver = ruby.classList.contains("ia-bouten-over");
+        const isBoutenUnder = ruby.classList.contains("ia-bouten-under");
+        let decoMarkup = "";
+        if (line) {
+          decoMarkup = `${line.op}(${line.pattern})`;
+        } else if (isBoutenOver) {
+          decoMarkup = `^^(..)`;
+        } else if (isBoutenUnder) {
+          decoMarkup = `^_(..)`;
+        }
+        ruby.replaceWith(doc.createTextNode(`${formatRubyMarkup(base, rubyOp, rubyText)}${decoMarkup}`));
+        continue;
+      }
+
+      // Nested double-level?
+      const innerRuby = firstDirectChildByTag(ruby, "ruby");
+      if (innerRuby) {
+        const outerRts = directChildrenByTag(ruby, "rt").map(
+          (rt) => (rt.textContent ?? "").trim()
+        ).filter(Boolean);
+
+        const innerClone = innerRuby.cloneNode(true) as HTMLElement;
+        innerClone.querySelectorAll("rt, rp").forEach((n) => n.remove());
+        const base = (innerClone.textContent ?? "").trim();
+        const innerRts = directChildrenByTag(innerRuby, "rt").map(
+          (rt) => (rt.textContent ?? "").trim()
+        ).filter(Boolean);
+
+        const levels = [...innerRts, ...outerRts].filter(Boolean);
+        const innerOp = innerRuby.classList.contains("ia-ruby-over") ? "^^" : "^_";
+        ruby.replaceWith(doc.createTextNode(levels.length > 0 ? formatRubyMarkupLevels(base, innerOp, levels) : base));
+        continue;
+      }
+
+      // Simple ruby (single-level or legacy <rtc>)
+      const baseClone = ruby.cloneNode(true) as HTMLElement;
+      baseClone.querySelectorAll("rt, rp, rtc").forEach((n) => n.remove());
+      const base = (baseClone.textContent ?? "").trim();
+
+      const rts = directChildrenByTag(ruby, "rt").map(
+        (rt) => (rt.textContent ?? "").trim()
+      );
+      const rtcs = directChildrenByTag(ruby, "rtc").map(
+        (rtc) => (rtc.textContent ?? "").trim()
+      );
+      const levels = [...rts, ...rtcs].filter(Boolean);
+      const op = ruby.classList.contains("ia-ruby-under") ? "^_" : "^^";
+      ruby.replaceWith(doc.createTextNode(levels.length > 0 ? formatRubyMarkupLevels(base, op, levels) : base));
+    }
+    rubies = Array.from(root.querySelectorAll("ruby"));
+  }
+
+  for (const span of Array.from(root.querySelectorAll("span.ia-bouten"))) {
+    const base = (span.textContent ?? "").trim();
+    if (!base) continue;
+    const isOver = span.classList.contains("ia-bouten-over");
+    const isUnder = span.classList.contains("ia-bouten-under");
+    const line = linePatternFromClasses(span);
+    
+    // Bouten + Underline combinations
+    if (line && isOver) {
+      span.replaceWith(doc.createTextNode(`${formatRubyMarkup(base, "^^", BOUTEN_PATTERN)}${line.op}(${line.pattern})`));
+    } else if (line && isUnder) {
+      span.replaceWith(doc.createTextNode(`${formatRubyMarkup(base, line.op, line.pattern)}^^(..)`));
+    } else if (isOver && isUnder) {
+      span.replaceWith(doc.createTextNode(`${formatRubyMarkup(base, "^^", BOUTEN_PATTERN)}^_(..)`));
+    } else if (isUnder) {
+      span.replaceWith(doc.createTextNode(formatRubyMarkup(base, "^_", BOUTEN_PATTERN)));
+    } else {
+      span.replaceWith(doc.createTextNode(formatRubyMarkup(base, "^^", BOUTEN_PATTERN)));
+    }
+  }
+
+  for (const span of Array.from(root.querySelectorAll("span.ia-underline:not(.ia-bouten), span.ia-overline:not(.ia-bouten)"))) {
+    const base = (span.textContent ?? "").trim();
+    const line = linePatternFromClasses(span) ?? { op: "^_" as RubyOp, pattern: ".-" };
+    span.replaceWith(doc.createTextNode(formatRubyMarkup(base, line.op, line.pattern)));
+  }
+
+  return root.innerHTML;
+}
+
+// ---------------------------------------------------------------------------
+// DOM live rendering
+// ---------------------------------------------------------------------------
+
+const SKIP_TAGS = new Set(["CODE", "PRE", "A", "RUBY", "SCRIPT", "STYLE"]);
+
+function isInsideSkippedElement(element: Element, root: Element): boolean {
+  for (let current: Element | null = element; current; current = current.parentElement) {
+    if (SKIP_TAGS.has(current.tagName)) return true;
+    if (current === root) return false;
+  }
+  return false;
+}
+
+function hasOnlyTransparentDescendants(container: Element): boolean {
+  return Array.from(container.querySelectorAll("*")).every(
+    (element) => element.tagName === "SPAN" && element.attributes.length === 0
+  );
+}
+
+function replaceOneTransparentFragment(el: HTMLElement): boolean {
+  const candidates = [el, ...Array.from(el.querySelectorAll("*"))].reverse();
+  for (const container of candidates) {
+    if (isInsideSkippedElement(container, el) || !hasOnlyTransparentDescendants(container)) continue;
+    const textNodes: Text[] = [];
+    const walker = container.ownerDocument.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+    if (textNodes.length <= 1) continue;
+
+    const source = container.textContent ?? "";
+    if (!hasRuby(source)) continue;
+    const html = rubyToHTML(source);
+    if (html === source) continue;
+
+    const temp = container.ownerDocument.createElement("span");
+    temp.innerHTML = html;
+    const fragment = container.ownerDocument.createDocumentFragment();
+    while (temp.firstChild) fragment.appendChild(temp.firstChild);
+    container.replaceChildren(fragment);
+    return true;
+  }
+  return false;
+}
+
+export function replaceRubyInElement(el: HTMLElement): void {
+  while (replaceOneTransparentFragment(el)) {
+    // One transparent container can contain several expressions; repeat for
+    // independent transparent subtrees elsewhere in the block.
+  }
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (SKIP_TAGS.has((node as Element).tagName)) return;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? "";
+      if (!hasRuby(text)) return;
+      const html = rubyToHTML(text);
+      if (html === text) return;
+
+      const ownerDocument = node.ownerDocument ?? el.ownerDocument;
+      const temp = ownerDocument.createElement("span");
+      temp.innerHTML = html;
+      const frag = ownerDocument.createDocumentFragment();
+      while (temp.firstChild) frag.appendChild(temp.firstChild);
+      if (node.parentNode) node.parentNode.replaceChild(frag, node);
+      return;
+    }
+    const children = Array.from(node.childNodes);
+    for (const child of children) walk(child);
+  };
+  walk(el);
+}
+
+// ---------------------------------------------------------------------------
+// Macro renderer helper
+// ---------------------------------------------------------------------------
+
+export function renderMacroRuby(args: string[]): string | null {
+  if (args.length < 3) return null;
+  const base = args[1]?.trim();
+  const rawAnn = args[2]?.trim();
+  if (!base || !rawAnn) return null;
+
+  const posArg = (args[3] ?? "").trim().toLowerCase();
+  const op: RubyOp = posArg === "under" ? "^_" : "^^";
+
+  if (rawAnn === BOUTEN_PATTERN) return renderBouten(base, op);
+  const macroLineStyle = getUnderlineStyle(rawAnn);
+  if (macroLineStyle !== null) return renderLine(base, op, macroLineStyle);
+
+  const levels = splitByUnescapedPipe(rawAnn).map(unescape);
+  return renderRuby(base, op, levels);
+}
