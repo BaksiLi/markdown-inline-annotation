@@ -147,8 +147,10 @@ The public model names and UTF-16, zero-based, end-exclusive range invariants
 are now fixed in v2 and covered by model fixtures. Before extraction:
 
 - decide whether fixtures live with the neutral core or in a small conformance
-  package;
-- automate release tags and adapter update checks.
+  package.
+
+Tagged releases and cross-integration dependency updates are already handled by
+the monorepo's shared version and `release.yml`.
 
 The markdown-it package should then become a small adapter depending on the
 neutral core.
@@ -191,5 +193,6 @@ SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/satteri/
 plugins/obsidian/  plugins/logseq/  plugins/vscode/  scripts/
 ```
 
-Brand: **Inline Annotation**. Host listings may use **Inline Ruby Annotation**
-for discoverability. Canonical spelling: `bouten`.
+Brand: **Inline Annotation**. Host listings may add "Ruby" for discoverability:
+Obsidian uses **Inline Annotation (Ruby)**; the VS Code listing keeps its
+established **Inline Ruby Annotation**. Canonical spelling: `bouten`.

@@ -1,6 +1,6 @@
 # Inline Annotation continues here
 
-The original Obsidian Inline Annotation repository is becoming the unified
+The original Obsidian Inline Annotation repository has become the unified
 Inline Annotation project. Its repository identity, community history, and
 published Obsidian releases are preserved.
 
