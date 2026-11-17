@@ -31,6 +31,18 @@ archiving their former update endpoints. GitHub archive mode prevents future rel
 archived repositories cannot act as ongoing release mirrors. Historical releases remain
 available for older installations. `npm run release:status` checks the live entries.
 
+Neither integration requires its own source repository. Obsidian requires its manifest
+at the repository root and assets under the matching version tag. Logseq selects the
+first `.zip` release asset and reads plugin metadata inside that archive; it does not
+need the monorepo's root package to be a Logseq plugin. Its updater merges the current
+marketplace manifest over installed metadata, allowing a directory repository change
+to take effect for existing installations.
+
+For Obsidian, changing the linked repository currently requires a directory admin;
+the official FAQ directs maintainers to `#community-directory` on Discord. For Logseq,
+change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
+preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
+
 ## Daily workflow
 
 Use the root npm workspace and lockfile. The original standalone repositories are
