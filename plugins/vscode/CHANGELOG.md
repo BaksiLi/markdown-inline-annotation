@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.4
+
+- Resolve shared core types from workspace source before the core is built,
+  with a separate configuration for emitted extension files.
+- Keep TypeScript build configurations out of the published VSIX.
+
 ## 0.8.0
 
 - Move development and releases to the Inline Annotation monorepo.

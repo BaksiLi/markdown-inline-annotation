@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.4
+
+- Create annotation elements with Obsidian's `createEl` helpers in their
+  owning document, including popout windows.
+- Reduce automated source-review warnings while preserving the plugin ID,
+  display name, rendering behavior, and update channel.
+
 ## 0.8.3
 
 - Use **Inline Annotation (Ruby)** as the plugin display name, preserving the

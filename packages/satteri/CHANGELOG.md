@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.4
+
+- Resolve shared core types directly from workspace source in a clean
+  checkout, with a separate configuration for emitted adapter files.
+- Continue as an unpublished local pilot in the shared release line.
+
 ## 0.8.0
 
 - Move development and releases to the Inline Annotation monorepo.
