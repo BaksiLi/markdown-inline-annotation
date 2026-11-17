@@ -108,15 +108,15 @@ been sent to Discord.
 ### Maintainer handover queue
 
 The maintainer resumed account setup on November 18, 2026 (Asia/Taipei).
-Marketplace now accepts the workflow; npm authorization still needs verification.
+Marketplace publishing is verified; the maintainer is completing the npm connection.
 
 | Item | Current evidence | Remaining action |
 | --- | --- | --- |
-| npm | Public latest is `0.4.0`; the latest resume still returned `E404` on the publish request, after the maintainer reported setup complete | Verify the saved package policy's exact owner, repository, workflow, blank environment, and permission for direct `npm publish`, then retry |
-| VS Code Marketplace | Trusted Publishing policy is Active; the workflow submitted `0.8.2` successfully; the publisher management page shows `Verifying` | Wait for Marketplace verification, then confirm the public version and downloadable VSIX before archiving the old source repository |
+| npm | Public latest is `0.4.0`; the latest resume returned `E404` before the maintainer clicked `Set up connection` | Complete the prepared connection and security verification, then retry the original tarball |
+| VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
 | Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
 | Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
-| Old source repositories | Migration notices are present; the temporary migration snapshot is archived | Archive the remaining source repositories after their corresponding publishing or update-channel handover is verified |
+| Old source repositories | Migration notices are present; the temporary migration snapshot and old VS Code repository are archived | Archive the old core and Logseq repositories after their corresponding publishing or update-channel handover is verified |
 
 After the account steps, the release resume command in the root README reuses
 the original public artifacts. The code, packaging, and GitHub release do not
@@ -131,12 +131,17 @@ The existing GitHub release was skipped and its files were not replaced.
 
 The [latest 0.8.2 resume](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44147828227)
 verified the original artifacts and successfully submitted the VSIX using direct
-GitHub OIDC. Marketplace reported `Verifying` at 02:30; public lookup still showed
-`0.3.3`. npm rejected the publish request with `E404`. The tarball's repository URL,
-workflow OIDC permission, and runner's Node/npm versions were checked and are
-correct; the account-side npm policy has not been independently inspected because
-the browser permission gate still denies access to npm. All seven public GitHub
-asset IDs and digests remain unchanged.
+GitHub OIDC. Marketplace initially reported `Verifying`, then public lookup
+confirmed `0.8.2`. The downloaded Marketplace VSIX has SHA-256
+`cc04299667c90bd0caef0b663408a7a8bef9d367f1fdee255dba871b5fe75086`,
+identical to the original GitHub asset; extension and embedded core versions are
+both `0.8.2`, and their repository metadata points to the monorepo. The old VS Code
+repository was then archived, preserving its migration notice and historical releases.
+
+npm rejected that resume with `E404`; the maintainer subsequently clarified that
+the prepared connection had not yet been submitted. The tarball's repository URL,
+workflow OIDC permission, and runner's Node/npm versions were checked and are correct.
+All seven public GitHub asset IDs and digests remain unchanged.
 
 ## Daily workflow
 
