@@ -19,6 +19,17 @@ host adapters.
 All workspaces now share one product release version. Syntax remains v2.
 The historical milestones below retain their original package version numbers.
 
+## Open Logseq follow-ups
+
+- Replace the SDK's embedded vulnerable dependencies through a supported
+  upstream release or a separately reviewed, reproducible rebuild. Lockfile
+  overrides alone do not alter its prebundled JavaScript.
+- Preserve escapes across the independent renderer's repeated passes.
+  `[a\^^(b)]^_(.-)` can reinterpret an escaped operator, and
+  `[\[y\]^^(b)]^_(.-)` can produce malformed HTML. The new live DOM builder
+  leaves malformed output as original text; the string conversion API still
+  needs a separate correction and conformance coverage.
+
 ## Contracts
 
 The stable [v2 spec](../SPEC.md) owns:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+- Use **Inline Annotation (Ruby)** as the plugin display name, preserving the
+  `inline-annotation` ID and existing update channel.
+- Add native Obsidian screenshots and their source notes to the guide.
+
 ## 0.8.0
 
 - Move development and releases to the Inline Annotation monorepo.

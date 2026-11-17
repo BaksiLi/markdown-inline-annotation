@@ -1,9 +1,12 @@
 > Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/obsidian`. Run workspace commands from the repository root; see the [root guide](../../README.md).
 
-# Inline Ruby Annotation for Obsidian
+# Inline Annotation (Ruby)
 
-Render Inline Annotation syntax as ruby/furigana, over/under glosses, bouten,
-overlines, and underlines in Obsidian.
+<img src="../../icon.png" alt="Inline Annotation cat icon" width="64" height="64">
+
+Add pronunciation, translations, and emphasis alongside your text using the
+**Inline Annotation syntax**. Render ruby/furigana, annotations above and below,
+bouten emphasis dots, overlines, and underlines in Obsidian.
 
 ```markdown
 [漢字]^^(かんじ)
@@ -14,6 +17,22 @@ overlines, and underlines in Obsidian.
 The plugin supports Reading view and an early Live Preview replacement widget.
 Both use the model from
 [`markdown-it-inline-annotation/core`](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it).
+
+## In Obsidian
+
+![Ruby, furigana, emphasis dots, and annotations above and below in Obsidian Reading view.](assets/obsidian-reading-ruby.jpg)
+
+Keep original terms and translations close to the sentence:
+
+![Chinese prose with English and German glosses, followed by per-character readings and a grouped multiword gloss.](assets/obsidian-reading-glosses.jpg)
+
+Live Preview renders annotations while you write and reveals their source when
+the cursor enters an expression:
+
+![Obsidian Live Preview with a ruby expression open for editing, a rendered two-slot gloss, and several line styles.](assets/obsidian-live-preview.jpg)
+
+These are native Obsidian 1.12.7 captures using the default light theme.
+The [source notes](examples/screenshots/) are included for repeatable captures.
 
 ## Behavior
 

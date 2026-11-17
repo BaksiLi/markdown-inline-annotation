@@ -1,7 +1,8 @@
 # Monorepo migration
 
 The unified repository is `BaksiLi/markdown-inline-annotation`. Syntax stays v2.
-All products use the 0.8.2 release line; public package and plugin identities are unchanged.
+The published products use 0.8.2; the local 0.8.3 preparation is not released.
+Public package and plugin identities are unchanged.
 Sätteri remains an unpublished pilot.
 
 ## Repository continuity
@@ -59,12 +60,13 @@ For Obsidian, the [official FAQ](https://docs.obsidian.md/community-directory/fa
 directs repository transfers to a directory admin through `#community-directory`
 on Discord. This migration is a same-owner rename of the original repository.
 After the maintainer requested **Check for new releases** on November 18, 2026,
-the management page recognized `baksili/markdown-inline-annotation` and queued the
-`0.8.2` review. Its current-release sidebar still shows `0.4.0`, and the legacy
-`obsidianmd/obsidian-releases` directory JSON still contains the old repository
-name. The GitHub redirect preserves its metadata and asset URLs. Review the
-scan and verify the directory cutover before deciding whether admin assistance
-is necessary; no Discord request has been sent.
+the management page recognized `baksili/markdown-inline-annotation`. Its
+current-release sidebar and public listing now show `0.8.2`; its automated review
+failed on two HTML assignments in the Logseq workspace, while the Obsidian build
+reproduced `main.js` byte-for-byte. The legacy `obsidianmd/obsidian-releases`
+directory JSON still contains the old repository name. The GitHub redirect
+preserves its metadata and asset URLs. Resolve the review findings before
+declaring the handover complete; no Discord request has been sent.
 For Logseq, change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
 preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
 
@@ -111,8 +113,8 @@ If Obsidian directory admin assistance is still needed, the prepared request is:
 > listing and download history.
 
 The request above has not been sent. The directory has discovered `0.8.2`, so
-include the pending review and canonical-repository recognition when asking for
-help rather than reporting that release discovery failed.
+include the failed scan, successful build verification, and canonical-repository
+recognition when asking for help rather than reporting release-discovery failure.
 
 ### Maintainer handover queue
 
@@ -123,7 +125,7 @@ The maintainer completed both publisher connections on November 18, 2026
 | --- | --- | --- |
 | npm | Public latest is `0.8.2`; the registry tarball is byte-for-byte identical to the original GitHub asset; a fresh registry install passed the core and markdown-it smoke checks | Complete |
 | VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
-| Obsidian directory | Signed-in management recognizes the canonical repository and has a pending `0.8.2` review; its current-release sidebar still shows `0.4.0`, and legacy directory JSON still names the old repository | Resolve review findings, verify the public release and directory cutover, then request admin assistance only if still needed |
+| Obsidian directory | Management and the public listing recognize the canonical repository and `0.8.2`; the automated scan failed, but build reproduction and attestations passed; legacy directory JSON still names the old repository | Fix scan errors, preview the corrected branch, then publish the approved display-name and listing update under the existing ID |
 | Logseq directory | PR `logseq/marketplace#965` is open and not a draft; its WIP app still reports an old draft status; the generated catalog still names the old repository | The draft/ready events were retriggered and the documented `@wip ready for review` body marker added; wait for the external check/review and catalog update, verify updates, then archive the old Logseq repository |
 | Old source repositories | Migration notices are present; the temporary migration snapshot, old core, and old VS Code repositories are archived | Archive the old Logseq repository after its update-channel handover is verified |
 
@@ -133,7 +135,7 @@ need to be recreated.
 
 ### Obsidian review findings
 
-The pending `0.8.2` review verifies the GitHub attestations for `main.js` and
+The failed `0.8.2` review verifies the GitHub attestations for `main.js` and
 `styles.css`. It also scans other workspaces: its unsafe-`innerHTML` errors
 point to `plugins/logseq/src/parser.ts`, and its DOMPurify/lodash dependency
 warnings come from `@logseq/libs@0.0.17`. A local esbuild metafile confirmed
@@ -142,15 +144,34 @@ rebuilt file is byte-for-byte identical to the `0.8.2` release artifact. The
 Logseq SDK dependencies are absent from that bundle, but their separate audit
 findings still need remediation.
 
+The SDK ships a prebundled `dist/lsplugin.user.js`: the installed SDK and the
+resulting Logseq release bundle both contain DOMPurify `2.3.8`. Dependency
+overrides alone would not replace that embedded code. An audit of the official
+SDK releases found no clean upgrade, so no override or SDK change has been made
+to disguise this warning. A supported SDK fix or a separately reviewed rebuild
+is still needed; this warning is not resolved by the DOM-assignment fix.
+
+The local 0.8.3 change removes both flagged assignments. Its live path builds
+only the renderer's allowed elements, classes, and fixed styles through DOM
+operations, preserving literal source HTML and entities as text. Logseq now has
+265 passing tests, including shared-corpus DOM equivalence, hostile input,
+nested literal text, and unchanged-source fallback. The full workspace check
+also passed. An official branch-preview scan is still required before calling
+the review resolved.
+
 The review also warns about the root README title, existing CSS compatibility,
 and the non-Obsidian assets in the shared release. It explicitly says the extra
 assets will not be downloaded by Obsidian. Keep the project README and shared
 release identities intact while addressing relevant findings. The official
 directory supports **Review branch** to preview changes before publishing
-another release. Build-verification completion has not yet been observed.
+another release. Build verification passed and reproduced `main.js`
+byte-for-byte.
 
-Listing descriptions are being tailored under the existing **Inline Ruby
-Annotation** name and `inline-annotation` ID. The draft has not been saved.
+The approved new display name is **Inline Annotation (Ruby)**, keeping the
+`inline-annotation` ID. The local manifests and README have been prepared for
+0.8.3. The existing cat icon is retained, and native Obsidian screenshots are
+included with their source notes. The maintainer's edited listing descriptions
+remain an unsaved draft; no public branding update has been submitted.
 The name is a display name, not a permanent identifier: the official
 [manifest reference](https://docs.obsidian.md/Reference/Manifest#name) permits
 updating plugin names through `manifest.json`. Any later naming change should
