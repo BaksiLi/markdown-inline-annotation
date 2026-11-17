@@ -110,7 +110,7 @@ These account-dependent steps are deferred until the maintainer is available.
 | Item | Current evidence | Remaining action |
 | --- | --- | --- |
 | npm | Public latest is `0.4.0`; local account lookup returns `E401`; `0.8.2` is available as a GitHub tarball | Complete maintainer login, change the package's trusted publisher to the monorepo, then resume `0.8.2` |
-| VS Code Marketplace | GitHub provides the `0.8.2` VSIX; Marketplace publication has not completed | Configure the existing `baksili` publisher's GitHub Trusted Publishing policy, then resume the same VSIX |
+| VS Code Marketplace | Public latest is `0.3.3`; GitHub provides the `0.8.2` VSIX; the GitHub OIDC token exchange returns `401` for publisher `baksili` | Configure the existing `baksili` publisher's GitHub Trusted Publishing policy, then resume the same VSIX |
 | Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
 | Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
 | Old source repositories | Migration notices are present; the temporary migration snapshot is archived | Archive the remaining source repositories after their corresponding publishing or update-channel handover is verified |
@@ -118,6 +118,13 @@ These account-dependent steps are deferred until the maintainer is available.
 After the account steps, the release resume command in the root README reuses
 the original public artifacts. The code, packaging, and GitHub release do not
 need to be recreated.
+
+Verified on November 18, 2026 (Asia/Taipei):
+[full CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140612552)
+passed. The [0.8.2 resume run](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140678700)
+downloaded and verified the original public artifacts successfully; npm rejected
+publishing authorization and Marketplace rejected the publisher token exchange.
+The existing GitHub release was skipped and its files were not replaced.
 
 ## Daily workflow
 
