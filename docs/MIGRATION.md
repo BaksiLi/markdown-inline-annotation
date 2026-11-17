@@ -56,8 +56,14 @@ marketplace manifest over installed metadata, allowing a directory repository ch
 to take effect for existing installations.
 
 For Obsidian, changing the linked repository currently requires a directory admin;
-the official FAQ directs maintainers to `#community-directory` on Discord. For Logseq,
-change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
+the [official FAQ](https://docs.obsidian.md/community-directory/faq) directs maintainers
+to `#community-directory` on Discord. This is an administrative repository change,
+not the normal release process. The existing GitHub redirect preserves the old metadata
+and asset URLs. Separately, the public Community directory still showed `0.4.0` on
+November 18, 2026; that listing has not yet been verified at `0.8.2`. The maintainer
+can use **Check for new releases** on the directory entry's management page and inspect
+its review results before asking an admin to change the canonical repository path.
+For Logseq, change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
 preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
 
 ## Publisher setup
@@ -103,7 +109,8 @@ For the Obsidian directory admin, the handover request is:
 > listing and download history.
 
 The directory request above is prepared for the maintainer to send; it has not
-been sent to Discord.
+been sent to Discord. Include the public directory's `0.4.0` version if it still
+has not discovered the public `0.8.2` release after checking from the management page.
 
 ### Maintainer handover queue
 
@@ -114,8 +121,8 @@ The maintainer completed both publisher connections on November 18, 2026
 | --- | --- | --- |
 | npm | Public latest is `0.8.2`; the registry tarball is byte-for-byte identical to the original GitHub asset; a fresh registry install passed the core and markdown-it smoke checks | Complete |
 | VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
-| Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
-| Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
+| Obsidian directory | The old GitHub URLs reach verified `0.8.2` metadata/assets, but the public Community directory still displays `0.4.0` | Sign in to check for new releases and review results; ask a directory admin to update the canonical repository name |
+| Logseq directory | PR `logseq/marketplace#965` is open and not a draft; its WIP app still reports an old draft status; the generated catalog still names the old repository | The draft/ready events were retriggered and the documented `@wip ready for review` body marker added; wait for the external check/review and catalog update, verify updates, then archive the old Logseq repository |
 | Old source repositories | Migration notices are present; the temporary migration snapshot, old core, and old VS Code repositories are archived | Archive the old Logseq repository after its update-channel handover is verified |
 
 After the account steps, the release resume command in the root README reuses
@@ -162,3 +169,21 @@ and shared corpus in the root, then update the integrations in the same change.
 `npm run release:prepare -- patch|minor|major` synchronizes every version and dependency,
 Obsidian mirrors, and the lockfile. Review `RELEASE_NOTES.md`, commit, and push the matching
 tag. CI and release use the same validation and packaging commands.
+
+## Local workspace cleanup
+
+The parent workspace now keeps the monorepo as its only development checkout.
+The five original repositories are preserved under `archive/standalone/`, with
+their Git histories, demos, and historical builds; only their ignored dependency
+directories were removed. Original writing drafts are under `drafts/`, and
+promotional media remain under `release-artifacts/`. The parent's README maps
+these locations. The monorepo's full check passed after moving the old checkouts.
+
+The temporary `markdown-inline-annotation-migration` repository was audited on
+November 18, 2026. It has no stars, forks, issues, pull requests, or releases.
+All implementation history is already in this monorepo; its only additional
+commit, `a413156`, replaces the README with migration guidance. No plugin update
+channel or publishing workflow depends on that temporary repository. A complete
+Git mirror, all four Actions runs' artifacts, logs, and repository metadata are
+preserved locally under `archive/migration-snapshot/`. The remote repository
+remains archived; deletion has not been performed.
