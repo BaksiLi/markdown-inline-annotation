@@ -1,5 +1,3 @@
-> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/logseq`. Run workspace commands from the repository root; see the [root guide](../../README.md).
-
 # logseq-furigana-ruby
 
 Logseq plugin for **Inline Annotation**: ruby/furigana, over/under glosses,

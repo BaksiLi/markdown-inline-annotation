@@ -1,15 +1,18 @@
-Inline Annotation **0.8.3** refreshes the Obsidian presentation and resolves the
-errors from the Obsidian directory's automated source review.
+Inline Annotation **0.8.4** improves editor integration checks, reduces
+Obsidian source-review warnings, and makes release activity easier to see.
 
-- Obsidian: the display name is now **Inline Annotation (Ruby)**. The
-  `inline-annotation` ID, Community listing, download history, and update
-  channel are unchanged, so existing installations simply update.
-- Obsidian: the guide adds native screenshots of Reading view and Live Preview;
-  the original cat icon is kept.
-- Logseq: live-rendered annotations are built with explicit DOM operations.
-  Literal HTML and entity-looking text beside an annotation stay text instead of
-  becoming elements or being decoded. Ruby, line styles, nesting, and host
-  boundaries render as before.
+- Obsidian: annotation elements use the host's `createEl` helpers, keeping the
+  owning document correct for popout windows. The display name remains
+  **Inline Annotation (Ruby)**; the ID, listing, download history, cat icon,
+  and update channel are preserved.
+- Sätteri and VS Code: typechecks resolve the shared core directly from source,
+  including in a clean checkout before the core is built. Separate build
+  configurations keep emitted packages portable.
+- `npm run release:status` now reports downloads across Obsidian, npm, VS Code,
+  and both Logseq repositories, plus stars and directory handover state.
+  Each metric keeps its platform definition and reporting period.
+- The README keeps the original proposal, examples, and screenshots, adds live
+  download badges, and moves release operations into a focused guide.
 - Syntax remains **v2**, including balanced annotation parentheses. Public npm
   package names, Logseq IDs, and the VS Code publisher and extension ID stay
   unchanged.

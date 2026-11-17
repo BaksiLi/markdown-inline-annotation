@@ -1,8 +1,24 @@
 import { capture } from "./lib.mjs";
+import { downloadStats } from "./download-stats.mjs";
 
 const home = "baksili/markdown-inline-annotation";
+const github = async (endpoint, paginate = false) => {
+  const data = JSON.parse(capture("gh",
+    ["api", endpoint, ...(paginate ? ["--paginate", "--slurp"] : [])],
+    { timeout: 30000 }));
+  return paginate ? data.flat() : data;
+};
+console.log(`Reach (queried ${new Date().toISOString()})`);
+for (const result of await downloadStats(github)) {
+  console.log(`${result.source}: ${result.error ? `unavailable (${result.error})` : result.text}`);
+  if (result.error) process.exitCode = 1;
+}
+console.log("Downloads include repeat downloads, updates, and automation; these are not unique users.");
+console.log("Platform counters use different definitions and refresh times; no cross-platform total is reported.\n");
+
 const canonical = JSON.parse(capture("gh", ["api", `repos/${home}`]));
 console.log(`Home: ${canonical.full_name} (repository ${canonical.id})`);
+console.log(`Community: ${canonical.stargazers_count} stars; ${canonical.forks_count} forks`);
 const old = ["markdown-it-inline-annotation", "obsidian-inline-annotation",
   "logseq-furigana-ruby", "vscode-inline-annotation"];
 for (const name of old) {
@@ -22,6 +38,10 @@ for (const [host, entry] of [
   ["Obsidian legacy index", obsidian.find((item) => item.id === "inline-annotation")],
   ["Logseq", logseq.packages.find((item) => item.id === "logseq-furigana-ruby")],
 ]) {
+  if (!entry) {
+    console.log(`${host}: not present in this index; verify the live directory separately`);
+    continue;
+  }
   const ready = entry?.repo?.toLowerCase() === home;
   let state = ready ? "migrated" : "registry migration pending";
   if (!ready && entry?.repo) {
@@ -33,4 +53,5 @@ for (const [host, entry] of [
   console.log(`${host}: ${entry?.repo ?? "not found"} (${state})`);
 }
 console.log("Obsidian's live listing and review can advance before the legacy index.");
+console.log("Obsidian listing: https://community.obsidian.md/plugins/inline-annotation");
 console.log("Review status: https://community.obsidian.md/account/plugins/inline-annotation");

@@ -2,6 +2,11 @@
 
 <img src="./icon.png" alt="Inline Annotation cat icon" width="64" height="64">
 
+[![npm version](https://img.shields.io/npm/v/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
+[![npm downloads per month](https://img.shields.io/npm/dm/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
+[![Obsidian downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24%5B%22inline-annotation%22%5D.downloads&label=Obsidian%20downloads&color=7c6f48)](https://community.obsidian.md/plugins/inline-annotation)
+[![CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml/badge.svg)](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml)
+
 Inline Annotation is a small Markdown extension for ruby/furigana, phonetic
 guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 
@@ -39,7 +44,6 @@ implementations aligned. This is a proposal with working implementations.
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
-| remark/unified | Not implemented | Deferred until a concrete AST pipeline needs it |
 
 ## Install
 
@@ -124,7 +128,7 @@ Reading view sees rendered DOM, while Live Preview works on editor source
 ranges. These boundaries are documented in the integration guides and
 [adapter contract](docs/ADAPTERS.md).
 
-## Develop
+## For contributors
 
 Use Node.js 24 and npm. All commands run from this directory.
 
@@ -148,57 +152,25 @@ ignored publication directory; Logseq reads the canonical fixtures directly.
 
 ## Release
 
-```sh
-npm run release:prepare -- patch
-npm run check
-npm run release:pack
-# Review and commit the version, lockfile, and RELEASE_NOTES.md.
-release_version=$(node -p 'require("./package.json").version')
-git tag "$release_version"
-git push origin main "$release_version"
-```
-
-Use the version printed by `release:prepare` as the **bare semver tag**. One tagged workflow
-checks every integration, packages once, and publishes the same verified files. The bare
-tag supports Obsidian's exact-version lookup and Logseq's latest-release discovery.
-Versions are synchronized across workspaces; syntax revisions are specified separately.
-
-GitHub assets, npm, and VS Code Marketplace publish in separate jobs. npm requires a
-trusted publisher for `BaksiLi/markdown-inline-annotation`, workflow `release.yml`.
-Marketplace uses GitHub OIDC with a Trusted Publishing policy on the existing
-`baksili` publisher for the same repository and workflow. Both publishers need
-one-time account setup; no Azure application or stored publishing token is needed.
-Missing authorization fails the relevant publishing job; the GitHub VSIX remains
-available. See the [publisher setup and directory handover](docs/MIGRATION.md#publisher-setup).
-
-Workflow retries verify existing npm integrity and GitHub asset hashes before accepting
-an already published version. Changed content requires a new version.
-
-After fixing publisher authorization, resume the current release from its original
-public assets:
+One version tag checks all integrations, packages them once, and publishes to
+GitHub, npm, and VS Code Marketplace; Obsidian discovers the matching GitHub
+release. See the [release guide](docs/RELEASING.md) for preparation, verification,
+and retries.
 
 ```sh
-gh workflow run release.yml --ref main -f existing_release="$(node -p 'require("./package.json").version')"
+npm run release:status
 ```
 
-This verifies the downloaded files against `SHA256SUMS`, GitHub asset digests, and
-the package metadata, then retries npm and Marketplace. It does not rebuild the
-artifacts or alter the existing GitHub release.
+This reports live download counts, stars, and directory handover status from
+the platform sources. Downloads and installs are shown separately, with npm's
+reporting dates; these are activity counters, not unique-user counts.
 
-## Repository migration
+All integrations now share this monorepo, continuing the original Obsidian
+repository with its stars, history, plugin IDs, and update channels preserved
+([migration details](docs/MIGRATION.md)).
 
-This is the original **Obsidian Inline Annotation repository**, renamed and
-expanded into the shared project. Its repository identity, stars, community
-history, original tags, and published Obsidian releases are preserved.
-
-All five original Git histories remain as ancestors. Other historical tags
-are retained under `history/<integration>/...`. Existing npm package names,
-plugin IDs, and documented core exports remain unchanged. Older update
-endpoints stay available during the directory handover.
-
-See [migration details](docs/MIGRATION.md), [the roadmap](docs/ROADMAP.md), and
-[v2 design rationale](docs/v2-rationale.md). Run `npm run release:status` to
-inspect the live handover state.
+Further reading: [roadmap](docs/ROADMAP.md) · [v2 design rationale](docs/v2-rationale.md)
+· [adapter contract and future ports](docs/ADAPTERS.md).
 
 ## License
 

@@ -94,11 +94,11 @@ and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
   Logseq repository active until the PR merges and updates are verified, then
   archive it. GitHub archive mode would block its releases, so it cannot serve
   as an ongoing mirror.
-- **Obsidian legacy index:** `obsidianmd/obsidian-releases` still names the old
-  repository path, which redirects to this repository. The live directory
-  already recognizes the canonical repository. If an admin change is wanted,
-  the [official FAQ](https://docs.obsidian.md/community-directory/faq) routes
-  it through `#community-directory` on Discord.
+- **Obsidian directory:** the live directory recognizes the canonical
+  repository. On November 18, 2026, `inline-annotation` was absent from
+  `obsidianmd/obsidian-releases/community-plugins.json` while its live listing
+  and update channel remained available; do not interpret that legacy file
+  alone as the listing's status. Old repository URLs still redirect here.
 - **Logseq SDK advisory:** `@logseq/libs@0.0.17` ships a prebundled
   `dist/lsplugin.user.js` embedding DOMPurify `2.3.8` and lodash `4.17.21`.
   Dependency overrides cannot replace that code, and no official SDK release
@@ -111,10 +111,11 @@ The official scan covers the whole repository. In 0.8.3 the Logseq live
 renderer builds only its allowed elements, classes, and fixed styles through
 DOM operations, removing the flagged HTML assignments while keeping literal
 source HTML and entities as text. The branch preview of that change reported no
-errors. Remaining warnings are either intentional (the display-name change and
-the umbrella README title), outside the Obsidian bundle (Sätteri and VS Code
-types, the Logseq SDK), deliberate standard DOM use, or CSS `text-decoration`
-support notes for hosts older than the plugin's minimum app version.
+errors. In 0.8.4, Sätteri and VS Code resolve core types from source, and
+Obsidian uses `createEl` for annotation elements. Remaining warnings concern
+the umbrella README title, the Logseq SDK outside the Obsidian bundle,
+deliberate standard DOM use for owning-document fragments, or CSS
+`text-decoration` support notes for hosts older than the minimum app version.
 
 ## Daily workflow
 

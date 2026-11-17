@@ -1,5 +1,3 @@
-> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `plugins/obsidian`. Run workspace commands from the repository root; see the [root guide](../../README.md).
-
 # Inline Annotation (Ruby)
 
 <img src="../../icon.png" alt="Inline Annotation cat icon" width="64" height="64">
@@ -93,7 +91,7 @@ npm run check --workspace plugins/obsidian
 
 The root `release:prepare` command synchronizes the manifest, versions map, and
 update metadata. All products release from one bare version tag; see the
-[root release guide](../../README.md#release).
+[release guide](../../docs/RELEASING.md).
 The check covers shared fixtures, Live Preview ranges, and package safety rules.
 The core is bundled; Obsidian and CodeMirror remain external.
 
