@@ -3,9 +3,11 @@
 <img src="./icon.png" alt="Inline Annotation cat icon" width="64" height="64">
 
 [![npm version](https://img.shields.io/npm/v/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
-[![npm downloads per month](https://img.shields.io/npm/dm/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
-[![Obsidian downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24%5B%22inline-annotation%22%5D.downloads&label=Obsidian%20downloads&color=7c6f48)](https://community.obsidian.md/plugins/inline-annotation)
+[![Cross-platform downloads: 3.3k+](https://img.shields.io/badge/cross--platform_downloads-3.3k%2B-397d54)](docs/RELEASING.md#download-counts)
 [![CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml/badge.svg)](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml)
+
+Downloads across Obsidian, npm, VS Code, and Logseq
+([2026-11-18 snapshot](docs/RELEASING.md#download-counts)).
 
 Inline Annotation is a small Markdown extension for ruby/furigana, phonetic
 guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
@@ -161,9 +163,9 @@ and retries.
 npm run release:status
 ```
 
-This reports live download counts, stars, and directory handover status from
-the platform sources. Downloads and installs are shown separately, with npm's
-reporting dates; these are activity counters, not unique-user counts.
+This reports total cross-platform downloads, the platform breakdown, stars,
+and directory handover status. Monthly downloads and installs remain separate;
+these are activity counters, not unique-user counts.
 
 All integrations now share this monorepo, continuing the original Obsidian
 repository with its stars, history, plugin IDs, and update channels preserved

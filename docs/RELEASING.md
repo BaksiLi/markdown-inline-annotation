@@ -43,21 +43,44 @@ is needed. See [publisher setup](MIGRATION.md#publisher-setup).
   button. Its scan may lag behind the GitHub release.
 - Check the Logseq directory handover before archiving its original repository.
 
+## Download counts
+
 ```sh
 npm run release:status
 ```
 
-The status command reports each platform's own download counter: Obsidian's
-official cumulative count; npm since first publication and for the last
+The status command leads with total cross-platform downloads, then each
+platform's own counter: Obsidian's official cumulative count; npm since first
+publication and for the last
 reported month; Marketplace downloads and installs separately; and Logseq ZIP
 downloads across the old and current repositories. It also reports stars,
 forks, and directory handover state.
 
+The total adds those four cumulative download counters. The npm monthly
+subtotal is already included; Marketplace installs use a separate metric.
+Other GitHub assets are excluded because their platform counters are already
+represented.
+
+The README's **3.3k+ downloads** badge is a rounded-down snapshot from
+2026-11-18:
+
+| Platform | Cumulative downloads |
+| --- | ---: |
+| Obsidian | 1,094 |
+| npm | 1,866 |
+| VS Code | 299 |
+| Logseq | 72 |
+| **Total** | **3,331** |
+
+The npm total reports through 2026-11-16. Run `release:status` for current
+values; the badge is a dated snapshot.
+
 The npm requests use non-overlapping periods of at most one year, so lifetime
 counts stay within the API's per-request limit. Failed sources are reported
-as unavailable, never zero; other sources still print and the command exits
-with a failure status. Counts include updates, repeats, and automation, and
-platforms refresh at different times. Do not add them up as unique users.
+as unavailable, never zero; the total is marked partial with the number of
+available sources, and the command exits with a failure status. Counts include
+updates, repeats, and automation, and platforms refresh at different times.
+The aggregate counts download events, not unique users.
 
 Sources: [Obsidian statistics](https://github.com/obsidianmd/obsidian-releases/blob/master/community-plugin-stats.json),
 [npm download API](https://github.com/npm/registry/blob/main/docs/download-counts.md),
