@@ -69,8 +69,10 @@ Both registries can trust this repository's GitHub Actions workflow directly:
 | npm | `markdown-it-inline-annotation` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 | VS Code Marketplace | publisher `baksili` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 
-For npm, complete `npm login` using the maintainer account, then update the
-package's trusted publisher:
+For npm, configure the package's trusted publisher in its npm settings using the
+repository and workflow above. Leave the environment blank and explicitly allow
+direct `npm publish`; newly created policies otherwise default to staging only.
+The same setup is available through the CLI after maintainer login:
 
 ```sh
 npm trust github markdown-it-inline-annotation --file release.yml --repo BaksiLi/markdown-inline-annotation --allow-publish --yes
@@ -105,12 +107,13 @@ been sent to Discord.
 
 ### Maintainer handover queue
 
-These account-dependent steps are deferred until the maintainer is available.
+The maintainer resumed account setup on November 18, 2026 (Asia/Taipei).
+Marketplace now accepts the workflow; npm authorization still needs verification.
 
 | Item | Current evidence | Remaining action |
 | --- | --- | --- |
-| npm | Public latest is `0.4.0`; local account lookup returns `E401`; `0.8.2` is available as a GitHub tarball | Complete maintainer login, change the package's trusted publisher to the monorepo, then resume `0.8.2` |
-| VS Code Marketplace | Public latest is `0.3.3`; GitHub provides the `0.8.2` VSIX; the GitHub OIDC token exchange returns `401` for publisher `baksili` | Configure the existing `baksili` publisher's GitHub Trusted Publishing policy, then resume the same VSIX |
+| npm | Public latest is `0.4.0`; the latest resume still returned `E404` on the publish request, after the maintainer reported setup complete | Verify the saved package policy's exact owner, repository, workflow, blank environment, and permission for direct `npm publish`, then retry |
+| VS Code Marketplace | Trusted Publishing policy is Active; the workflow submitted `0.8.2` successfully; the publisher management page shows `Verifying` | Wait for Marketplace verification, then confirm the public version and downloadable VSIX before archiving the old source repository |
 | Obsidian directory | The old repository URL redirects to the original repository and verified `0.8.2` metadata/assets | Send the prepared request to a directory admin to update the canonical repository name |
 | Logseq directory | PR `logseq/marketplace#965` is ready for review; the generated catalog still names the old repository | Wait for upstream review and catalog update, verify updates, then archive the old Logseq repository |
 | Old source repositories | Migration notices are present; the temporary migration snapshot is archived | Archive the remaining source repositories after their corresponding publishing or update-channel handover is verified |
@@ -119,12 +122,21 @@ After the account steps, the release resume command in the root README reuses
 the original public artifacts. The code, packaging, and GitHub release do not
 need to be recreated.
 
-Verified on November 18, 2026 (Asia/Taipei):
+Earlier verification on November 18, 2026 (Asia/Taipei):
 [full CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140612552)
 passed. The [0.8.2 resume run](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140678700)
 downloaded and verified the original public artifacts successfully; npm rejected
 publishing authorization and Marketplace rejected the publisher token exchange.
 The existing GitHub release was skipped and its files were not replaced.
+
+The [latest 0.8.2 resume](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44147828227)
+verified the original artifacts and successfully submitted the VSIX using direct
+GitHub OIDC. Marketplace reported `Verifying` at 02:30; public lookup still showed
+`0.3.3`. npm rejected the publish request with `E404`. The tarball's repository URL,
+workflow OIDC permission, and runner's Node/npm versions were checked and are
+correct; the account-side npm policy has not been independently inspected because
+the browser permission gate still denies access to npm. All seven public GitHub
+asset IDs and digests remain unchanged.
 
 ## Daily workflow
 
