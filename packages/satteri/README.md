@@ -1,12 +1,10 @@
-> Development and releases now live in the [Inline Annotation monorepo](https://github.com/BaksiLi/markdown-inline-annotation). This integration is maintained in `packages/satteri`. Run workspace commands from the repository root; see the [root guide](../../README.md).
-
 # satteri-inline-annotation
 
 Sätteri adapter for [Inline Annotation](https://github.com/BaksiLi/markdown-inline-annotation/tree/main/packages/markdown-it):
 visible ruby/furigana, over/under glosses, bouten, overlines, and underlines in
 Markdown.
 
-This repository is an independent host adapter. The syntax, semantic model,
+This package is a host adapter. The syntax, semantic model,
 source ranges, canonical HTML, and conformance fixtures remain owned by
 `markdown-it-inline-annotation`.
 

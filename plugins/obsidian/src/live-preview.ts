@@ -17,9 +17,10 @@ class InlineAnnotationWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const element = view.dom.ownerDocument.createElement("span");
-    element.className = "ia-live-preview-widget";
-    element.append(renderInlineAnnotationModelToFragment(this.model, element.ownerDocument, OBSIDIAN_RENDER_OPTIONS));
+    // Create in the editor's own document so popout windows keep working.
+    const document = view.dom.ownerDocument;
+    const element = document.createDocumentFragment().createEl("span", { cls: "ia-live-preview-widget" });
+    element.append(renderInlineAnnotationModelToFragment(this.model, document, OBSIDIAN_RENDER_OPTIONS));
     return element;
   }
 

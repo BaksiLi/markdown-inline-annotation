@@ -35,9 +35,10 @@
     "markdown.markdownItPlugins": true
   },
   "scripts": {
-    "build": "tsc -p .",
+    "build": "tsc -p tsconfig.build.json",
     "test": "npm run build && node test/preview.test.mjs",
-    "check": "npm test && node scripts/check-package.mjs"
+    "check": "npm run typecheck && npm test && node scripts/check-package.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "markdown-it-inline-annotation": "^0.8.3"

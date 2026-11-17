@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { Window } from "happy-dom";
+import { createObsidianWindow } from "./obsidian-dom";
 import fixtureCorpus from "markdown-it-inline-annotation/fixtures/html-render.json";
 import segmentBoundaryCorpus from "./segment-boundaries.json";
 import { renderInlineAnnotationsInElement } from "../src/postprocessor";
@@ -41,7 +41,7 @@ function shouldSkipSharedFixture(fixture: FixtureCorpus["cases"][number]): boole
 }
 
 function createRoot(html = ""): HTMLElement {
-  const window = new Window();
+  const window = createObsidianWindow();
   const root = window.document.createElement("div");
   root.innerHTML = html;
   window.document.body.append(root);

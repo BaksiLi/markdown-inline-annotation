@@ -124,37 +124,14 @@ function createTextFragment(document: Document, text: string): DocumentFragment 
   return fragment;
 }
 
-function createSpan(document: Document, classes: string, children: DocumentFragment): HTMLSpanElement {
-  const span = document.createElement("span");
-  span.className = classes;
-  appendFragment(span, children);
-  return span;
+function classList(classes: string): string[] {
+  return classes.split(" ").filter(Boolean);
 }
 
-function createRubyElement(
-  document: Document,
-  base: DocumentFragment,
-  annotation: string,
-  position: AnnotationPosition,
-  options: ResolvedOptions,
-  extraClasses = ""
-): HTMLElement {
-  const ruby = document.createElement("ruby");
-  ruby.className = [className(options, "ruby"), className(options, `ruby-${position}`), extraClasses].filter(Boolean).join(" ");
-  const open = options.fallbackParens.charAt(0) || "(";
-  const close = options.fallbackParens.charAt(1) || ")";
-
-  appendFragment(ruby, base);
-  const rpOpen = document.createElement("rp");
-  rpOpen.textContent = open;
-  ruby.append(rpOpen);
-  const rt = document.createElement("rt");
-  rt.textContent = unescapeMarkup(annotation);
-  ruby.append(rt);
-  const rpClose = document.createElement("rp");
-  rpClose.textContent = close;
-  ruby.append(rpClose);
-  return ruby;
+function createSpanFragment(document: Document, classes: string, children: DocumentFragment): DocumentFragment {
+  const fragment = createFragment(document);
+  appendFragment(fragment.createEl("span", { cls: classList(classes) }), children);
+  return fragment;
 }
 
 function createRubyFragment(
@@ -166,7 +143,16 @@ function createRubyFragment(
   extraClasses = ""
 ): DocumentFragment {
   const fragment = createFragment(document);
-  fragment.append(createRubyElement(document, base, annotation, position, options, extraClasses));
+  const ruby = fragment.createEl("ruby", {
+    cls: [className(options, "ruby"), className(options, `ruby-${position}`), ...classList(extraClasses)],
+  });
+  const open = options.fallbackParens.charAt(0) || "(";
+  const close = options.fallbackParens.charAt(1) || ")";
+
+  appendFragment(ruby, base);
+  ruby.createEl("rp", { text: open });
+  ruby.createEl("rt", { text: unescapeMarkup(annotation) });
+  ruby.createEl("rp", { text: close });
   return fragment;
 }
 
@@ -201,9 +187,7 @@ function renderIndependentTextDecorations(
       deco.kind === "bouten"
         ? [className(options, "bouten"), className(options, `bouten-${deco.position}`)].join(" ")
         : lineClass(options, deco.position, deco.style);
-    const fragment = createFragment(document);
-    fragment.append(createSpan(document, classes, current));
-    current = fragment;
+    current = createSpanFragment(document, classes, current);
   }
   return current;
 }
@@ -220,9 +204,7 @@ function renderDecorations(
   if (textDecorationDecos.length > 1) {
     const decorated = renderIndependentTextDecorations(document, base, textDecorationDecos, options);
     if (!boutenOver) return decorated;
-    const fragment = createFragment(document);
-    fragment.append(createSpan(document, [className(options, "bouten"), className(options, "bouten-over")].join(" "), decorated));
-    return fragment;
+    return createSpanFragment(document, [className(options, "bouten"), className(options, "bouten-over")].join(" "), decorated);
   }
 
   const classes: string[] = [];
@@ -236,9 +218,7 @@ function renderDecorations(
     }
   }
 
-  const fragment = createFragment(document);
-  fragment.append(createSpan(document, classes.join(" "), base));
-  return fragment;
+  return createSpanFragment(document, classes.join(" "), base);
 }
 
 function renderRubyWithDecoration(
