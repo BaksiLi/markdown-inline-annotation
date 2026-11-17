@@ -16,7 +16,8 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "test": "node scripts/run-tests.mjs",
-    "check": "npm run build && npm test && node scripts/check-package.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build && npm test && node scripts/check-package.mjs",
     "install:vault": "npm run build && node scripts/install-vault.mjs"
   },
   "dependencies": {
