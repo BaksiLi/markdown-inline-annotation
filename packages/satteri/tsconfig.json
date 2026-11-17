@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "declaration": true,
     "lib": ["DOM", "ES2022"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
+    "paths": {
+      "markdown-it-inline-annotation/core": ["../markdown-it/src/core.ts"]
+    },
     "strict": true,
     "target": "ES2022"
   },

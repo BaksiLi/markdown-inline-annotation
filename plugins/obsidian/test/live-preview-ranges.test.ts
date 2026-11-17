@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Window } from "happy-dom";
+import { createObsidianWindow } from "./obsidian-dom";
 import {
   collectFallbackHostMarkdownRanges,
   mergeSourceRanges,
@@ -16,7 +16,7 @@ import { renderInlineAnnotationModelToFragment } from "../src/render-dom";
 import { OBSIDIAN_RENDER_OPTIONS } from "../src/render-options";
 
 function renderRangeHtml(range: ReturnType<typeof findInlineAnnotationLivePreviewRanges>[number]): string {
-  const window = new Window();
+  const window = createObsidianWindow();
   const root = window.document.createElement("div");
   root.append(renderInlineAnnotationModelToFragment(range.model, window.document, OBSIDIAN_RENDER_OPTIONS));
   return root.innerHTML;

@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "declaration": true,
     "esModuleInterop": true,
     "lib": ["ES2020"],
     "types": ["node"],
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
+    "paths": {
+      "markdown-it-inline-annotation": ["../../packages/markdown-it/src/index.ts"]
+    },
     "strict": true,
     "target": "ES2020"
   },
