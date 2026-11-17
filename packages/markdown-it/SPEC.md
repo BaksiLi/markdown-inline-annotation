@@ -1,0 +1,419 @@
+# Markdown Inline Annotation Extension
+
+A syntax specification for ruby, furigana, bouten, and text decorations.
+
+> **Version: v2 · Status: Stable.** v2 is almost a superset of v1 — it makes
+> decoration marks symmetric, reclassifies space alignment as a rendering
+> enhancement, and stops silently dropping over-capacity input. Active
+> implementations include the markdown-it, Logseq, Obsidian, VS Code, and
+> Sätteri adapters. `markdown-it-inline-annotation` `0.1.x` and
+> `logseq-furigana-ruby` `0.5.x` implement v1, archived at
+> [`docs/SPEC-v1.md`](./docs/SPEC-v1.md).
+
+Inline Annotation is the shared syntax family behind the Logseq Furigana Ruby
+plugin, the markdown-it implementation, the Obsidian and VS Code adapters, and
+later remark/unified support. Every implementation emits the canonical `ia-*`
+HTML class contract, so one stylesheet family works across hosts.
+
+## Status and Terminology
+
+The sections under **Normative Specification**, **Class Contract**, and
+**Markdown Compatibility** define the portable behavior implementations must
+preserve. Examples, rationale, conformance-fixture guidance, operator-property
+notes, grammar sketches, and migration notes are non-normative unless they
+explicitly use normative language.
+
+The words "must", "should", and "may" are used in their ordinary specification
+sense: "must" is required for conformance, "should" is recommended unless a host
+constraint makes it impractical, and "may" is optional.
+
+v2 keeps the two-slot model, source-range conventions, and `ia-*` class contract
+stable.
+The balanced-parenthesis revision remains part of v2 and changes annotation
+boundaries compared with earlier v2 implementations.
+Implementations must document this revision and its migration requirements;
+it is not fully source-compatible with the earlier delimiter rule.
+See **Annotation Parentheses** below.
+
+## Normative Specification
+
+### Operators
+
+Two position-assignment operators on a two-slot system (over / under):
+
+- `^^` assigns the **over** slot.
+- `^_` assigns the **under** slot.
+
+Bracketed form (use for multi-word or complex bases):
+
+```markdown
+[base]^^(annotation)
+[base]^_(annotation)
+```
+
+Abbreviated form (base stops at whitespace or Markdown structural delimiters):
+
+```markdown
+base^^(annotation)
+base^_(annotation)
+```
+
+An operator is only recognized when immediately followed by `(`. `^^` or `^_`
+not followed by `(` is literal text.
+
+### Slots
+
+Each base has two slots. Pipe notation and mixed chaining are equivalent:
+
+```markdown
+[a]^^(x|y)
+[a]^^(x)^_(y)
+[a]^_(y)^^(x)
+```
+
+- Capacity is two slots (over + under).
+- Same-operator chaining is not merged: `[a]^^(x)^^(y)` is two separate
+  expressions.
+- **Over-capacity input renders through as text.** When pipe notation already
+  fills both slots, extra pipe levels or a following chained operator are shown
+  as literal text so the author sees them (e.g. the `|z` in `[a]^^(x|y|z)` or
+  the `^_(z)` in `[a]^^(x|y)^_(z)`), rather than being silently dropped.
+  Tooling may warn.
+
+### Decoration Marks
+
+A slot value is a **mark** when its entire content matches one of the patterns
+below; otherwise it is ruby text. The slot determines the side; the glyph
+determines the mark. Marks are symmetric across slots:
+
+| Glyph | `^^` (over) | `^_` (under) |
+| --- | --- | --- |
+| `..` | bouten dots above | bouten dots below |
+| `.-` | overline (solid) | underline (solid) |
+| `.~` | wavy overline | wavy underline |
+| `.=` | double overline | double underline |
+
+```markdown
+[重要]^^(..)            bouten above
+[重要語句]^^(じゅうようごく|.-)   ruby above + underline below
+[強調]^^(..)^_(.~)       bouten above + wavy underline below
+[title]^^(.-)            overline above
+```
+
+To use a mark glyph as literal ruby text, escape the leading dot: `[x]^^(\.-)`
+renders ruby text ".-" above `x`.
+
+### Alignment
+
+Space alignment is a **rendering enhancement**, not part of the structural
+contract. It never changes meaning — only layout — so a renderer may apply it or
+not, and both results are conformant. Implementations may expose it as a
+rendering policy (`spaceAlignment`: `"always"`, `"auto"`, or `"off"`).
+
+When enabled and a slot annotation is space-separated with a part count equal to
+the base character count, the renderer splits the base into per-character ruby:
+
+```markdown
+[春夏秋冬]^^(はる なつ あき ふゆ)
+```
+
+If an annotation part is identical to the base character, that annotation is
+hidden while ruby spacing is preserved (`[振り仮名]^^(ふ り が な)`, り→り
+omitted). Two-level per-character ruby is valid when both slots align:
+
+```markdown
+[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)
+```
+
+Alignment falls back to group ruby when it would discard nested inline
+annotation markup. Because alignment is non-semantic, the same source may render
+as per-character ruby in one host and group ruby in another (e.g. an academic
+note configuration that prefers multi-word glosses); the base↔annotation
+association and `ia-*` classes stay identical.
+
+An `"auto"` policy should be conservative. For example,
+`[取り返す]^^(と り かえ す)` is a good candidate for per-character layout, while
+`[真值]^^(Truth Value)` should usually remain group ruby.
+
+### Nested Spans
+
+Bracketed bases may contain another Inline Annotation expression, for partially
+overlapping ruby. The base is parsed recursively; annotation slot contents are
+plain text in v2 (not parsed as Markdown).
+
+```markdown
+[[護]^^(まも)れ]^_(プロテゴ)
+[初音ミク^^(偉大なる|世界一姫様)]^_(Vocaloid)
+```
+
+### Escapes
+
+Backslash escapes are honored inside bases and annotations. Escaped pipe is
+literal text, not a slot separator:
+
+```markdown
+[A|B]^^(a\|b)
+[x]^^(a\)b)
+[x]^^(\.-)
+```
+
+### Annotation Parentheses
+
+Unescaped parentheses inside an annotation must balance.
+The closing `)` at depth zero ends the annotation; nested pairs remain literal
+annotation text, including their parentheses.
+Escaped `\(` and `\)` are literal characters and do not change the depth.
+Newlines and the supplied parse boundary still terminate an unsuccessful match.
+
+```markdown
+[artefact]^^((semi-)formal artefact)
+[term]^_(outer (inner (detail)))
+[base]^^((over))^_((under))
+[base]^^(\(semi-\)formal artefact)
+```
+
+Parentheses do not quote their contents or introduce rich text.
+Every unescaped `|` remains a slot separator, even inside a nested pair:
+`[base]^^(a(b|c)d)` assigns `a(b` and `c)d` to the two slots.
+Chaining and overflow follow the existing capacity rules after the annotation's
+closing delimiter has been found.
+An annotation with unbalanced parentheses is not matched; there is no fallback
+to the earlier first-unescaped-`)` rule.
+
+**Migration from earlier v2 implementations:**
+`[x]^^(a(b)c)` now annotates with `a(b)c`, rather than `a(b` followed by
+literal `c)`.
+To retain that earlier interpretation, write `[x]^^(a\(b)c)`.
+Earlier converters escaped only right parentheses, so
+`[x]^^((semi-\)formal artefact)` must become either
+`[x]^^((semi-)formal artefact)` or `[x]^^(\(semi-\)formal artefact)`.
+Converters emitting arbitrary annotation text must escape both `(` and `)`,
+as well as backslashes and literal pipes.
+Older implementations do not gain balanced-parenthesis support from the v2
+label alone; adapters must update their parser dependency or independent parser.
+
+### Source Model and Ranges
+
+Portable parser APIs and model fixtures use zero-based, end-exclusive offsets
+measured in UTF-16 code units into the exact original source string. This is the
+same indexing convention as JavaScript `String.prototype.slice`. A host may use
+bytes, Unicode scalar values, or line/column pairs internally, but its adapter
+must convert them at the portable API and conformance-fixture boundary.
+
+For every model:
+
+- `model.source` must equal the original source slice from `model.start` to
+  `model.end`;
+- `base.raw`, every slot `raw`, and every overflow `raw` must equal their
+  corresponding original source slices, including backslash escapes;
+- the base range excludes bracket delimiters, and slot ranges exclude their
+  operator, parentheses, and pipe separators;
+- pipe overflow belongs to the matched model and includes the first unassigned
+  pipe, while a chain attempted after both slots are filled remains outside the
+  model; and
+- a multi-model scan returns models in source order without overlap.
+
+Ranges describe source ownership, not rendered or unescaped text. Adapters must
+not recompute them from HTML, decoded text, or a host AST after source spelling
+has been lost.
+
+### Degenerate Behavior
+
+| Input | Result |
+| --- | --- |
+| `^^()` (empty slot) | not matched; literal text |
+| `^^` not followed by `(` | not matched; literal text |
+| unclosed `[` or `(` | not matched |
+| unbalanced unescaped parentheses inside an annotation | not matched |
+| newline inside `[...]` or `(...)` | not matched |
+| `\^^(...)` (escaped operator) | literal text |
+| `[a]^^(x)^^(y)` (same-operator chain) | first matched; `^^(y)` literal |
+| `[a]^^(x|y|z)` (extra pipe level) | x, y render; `|z` renders as text |
+| `[a]^^(x|y)^_(z)` (over capacity) | x, y render; `^_(z)` renders as text |
+
+## Class Contract
+
+Canonical HTML classes (default prefix `ia-`), shared by every implementation:
+
+| Construct | Classes |
+| --- | --- |
+| Ruby | `ia-ruby`, plus `ia-ruby-over` or `ia-ruby-under` |
+| Nested two-level ruby | outer ruby also carries `ia-ruby-double` |
+| Ruby + decoration | ruby also carries `ia-ruby-mixed` plus the decoration class |
+| Bouten | `ia-bouten`, plus `ia-bouten-over` and/or `ia-bouten-under` |
+| Underline (under slot) | `ia-underline`, plus `ia-underline-wavy` or `ia-underline-double` |
+| Overline (over slot) | `ia-overline`, plus `ia-overline-wavy` or `ia-overline-double` |
+
+`ruby-position` must be declared explicitly on **both** the over and under slots
+(inline style or stylesheet). It is a CSS inherited property, so a nested
+over-ruby inside an under-ruby would otherwise inherit `under` and render both
+annotations below the base. The reference stylesheet ships at
+`markdown-it-inline-annotation/styles.css`.
+
+CSS applies one `text-decoration-style` to all decoration lines on a single
+element. Implementations may merge overline + underline on one span when their
+styles are compatible. If an author combines different line styles on the two
+sides, renderers should use independent wrappers, for example an overline span
+around an underline span, so each side keeps its own style. Renderers that cannot
+express this may fall back to the most visible shared style, but the side
+classes and line presence must still be preserved.
+
+## Markdown Compatibility
+
+Implementations should avoid parsing Inline Annotation inside code spans, links,
+raw HTML, and entities. Emphasis and other inline constructs should continue to
+be parsed by the host Markdown engine. Implementations must escape user-provided
+base and annotation text before producing HTML.
+
+Markdown syntax is not part of Inline Annotation semantics. The annotation model
+is defined only by the Inline Annotation grammar: base range, over/under slots,
+pipe/chaining, marks, escaping, and overflow behavior. Annotation slot contents
+are plain text and must not be reparsed as Markdown when deciding slot meaning.
+
+This matches Markdown's field-boundary style: link/image labels, destinations,
+titles, and alt text each have their own parsing contract instead of treating
+every nested substring as general Markdown. Hosts may add richer Markdown
+rendering as an explicit adapter or rendering policy only if the plain
+annotation model and source ranges remain unchanged.
+
+### Source Segments and Rich-Text Runs
+
+The grammar operates on one contiguous source segment. DOM text nodes,
+rich-text runs, and their formatting metadata are host-layer structures, not
+characters in the Inline Annotation grammar.
+
+A host adapter:
+
+- **must** parse a complete valid expression contained in one host-eligible
+  source run;
+- **may** concatenate adjacent runs when every crossed boundary is semantically
+  transparent and replacement preserves the surrounding host structure;
+- **must not** concatenate across formatting, highlight, link, code, or another
+  semantic boundary when doing so would discard or reinterpret that boundary;
+- **may** conservatively preserve an expression split across transparent runs.
+
+A semantic wrapper around the whole expression is not a crossed boundary. For
+example, an expression entirely inside one strong-emphasis run may render while
+the outer emphasis remains. Hosts may still reserve entire contexts such as
+links and code. By contrast, a plain run followed by a bold run in the middle
+of an annotation slot must not be flattened into one plain string just to
+produce a match.
+
+When an adapter declines to join runs, it must preserve the original source and
+host decoration. This policy does not change core parsing: if the same text is
+later supplied as one contiguous Markdown source string, it remains a valid
+Inline Annotation expression.
+
+## Non-Normative Guidance
+
+### Conformance Fixtures
+
+The shared parser-model corpus lives in `fixtures/models.json`, the
+host-neutral rendering corpus in `fixtures/html-render.json`, and the
+source-segment and rich-text policy corpus in
+`fixtures/segment-boundaries.json`. Adapters should run the applicable corpora
+before adding host-specific tests. Fixtures
+assert semantic fragments and substring counts rather than exact serialized
+HTML, so markdown-it, Logseq, Obsidian, and future unified adapters can differ
+in wrapper markup or attribute ordering while preserving the same syntax
+behavior. Semantic fixtures should assert the class contract and visible text,
+not a renderer's choice to use inline styles or stylesheets. Rendering-policy
+fixtures declare options such as `spaceAlignment: "always"`. Host-specific
+behavior (Logseq slash-command conversion, parser conflicts, editor DOM timing)
+is tested outside this corpus.
+
+### Diagnostics
+
+Future lint and editor diagnostics should use the reserved IDs in
+[`docs/DIAGNOSTICS.md`](./docs/DIAGNOSTICS.md). That taxonomy is advisory; it
+does not require parsers or adapters to implement diagnostics, and it must not
+expand the syntax into host-owned Markdown tokens.
+
+## Non-Normative Appendices
+
+### Appendix A: Operator Properties
+
+`^^` and `^_` are position-assignment operators on a 2-slot system (over /
+under). Marks (`..`, `.-`, `.~`, `.=`) switch a slot from ruby text to CSS
+decoration on that side.
+
+**Commutativity** — chain order doesn't matter; position comes from the operator:
+- `[a]^^(x)^_(y)` ≡ `[a]^_(y)^^(x)`
+
+**Pipe equivalence** — pipe is compact notation for cross-operator chaining:
+- `[a]^^(x|y)` ≡ `[a]^^(x)^_(y)` ≡ `[a]^_(y)^^(x)`
+- `[漢字]^^(かんじ|.-)` ≡ `[漢字]^^(かんじ)^_(.-)` — ruby above + underline below
+
+**Side symmetry** — a mark means the same decoration on whichever side its slot
+selects:
+- `[t]^^(.-)` overline · `[t]^_(.-)` underline
+
+**Idempotency of position** — same-operator chaining is rejected (each slot is
+claimed once):
+- `[a]^^(x)^^(y)` — not chained; two separate expressions
+
+**Capacity** — max 2 levels (over + under) per base. Over-capacity input renders
+through as text (changed from v1, which silently dropped it).
+
+### Appendix B: Grammar Sketch (EBNF)
+
+This grammar is descriptive. It sketches the source shape once a host has
+decided that Inline Annotation parsing is allowed at a position. It does not
+require hosts to force parsing inside Markdown links, code spans, raw HTML,
+entities, Obsidian Live Preview tokens, or any other host-owned token stream.
+Implementations must also enforce the degenerate behavior table above.
+
+```ebnf
+inline-annotation = bracketed-form | abbreviated-form ;
+
+bracketed-form    = bracketed-base op annotation [ opposite-chain ] ;
+abbreviated-form  = abbreviated-base op annotation [ opposite-chain ] ;
+
+op                = "^^" | "^_" ;
+opposite-chain    = opposite-op annotation ;
+opposite-op       = "^_" when op is "^^"
+                  | "^^" when op is "^_" ;
+
+annotation        = "(" annotation-body ")" ;
+annotation-body   = { escaped-char | annotation-char | "|"
+                    | "(" annotation-body ")" } ;
+
+bracketed-base    = "[" { escaped-char | bracketed-base | base-char } "]" ;
+abbreviated-base  = 1*abbreviated-base-char ;
+
+mark              = ".." | ".-" | ".~" | ".=" ;
+escaped-char      = "\\" any-char ;
+
+annotation-char   = any-char except unescaped "|", "(", ")", LF, CR ;
+base-char         = any-char except unescaped "]", LF, CR ;
+abbreviated-base-char
+                  = any-char except whitespace and Markdown structural delimiters ;
+```
+
+Recognition notes:
+
+- Unescaped annotation parentheses are balanced across the entire slot list,
+  not independently per slot.
+  Only a `)` at depth zero closes `annotation`; escaped parentheses do not
+  affect the depth.
+- Split the matched annotation body at every unescaped `|`, including pipes
+  inside nested parentheses, then apply the two-slot capacity and overflow rules.
+- An operator is recognized only when the next character after the operator is
+  `(`.
+- `opposite-chain` is accepted only when the first annotation has remaining
+  slot capacity. Same-operator chains are not merged.
+- `mark` classification happens after slot splitting and before escape removal;
+  escaping the leading dot keeps the slot as ruby text.
+
+### Appendix C: Changes from v1
+
+v1 is archived at [`docs/SPEC-v1.md`](./docs/SPEC-v1.md). Rationale, migration
+notes, and the core layering plan are in [`docs/v2-rationale.md`](./docs/v2-rationale.md).
+Summary:
+
+1. **Symmetric marks** — `.-`, `.~`, `.=` in the over slot are now overline
+   styles instead of literal ruby text. (Only breaking case; escape with `\` for
+   the old literal behavior.)
+2. **Alignment is a rendering enhancement**, not a structural/parse contract.
+3. **Over-capacity input renders through as text** instead of being silently
+   dropped.
