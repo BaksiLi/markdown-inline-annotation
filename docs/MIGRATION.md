@@ -1,21 +1,23 @@
 # Monorepo migration
 
 The unified repository is `BaksiLi/markdown-inline-annotation`. Syntax stays v2.
-All products use the 0.8.2 release line; public package and plugin identities are unchanged.
-Sätteri remains an unpublished pilot.
+Public package and plugin identities are unchanged. Sätteri remains an
+unpublished pilot.
 
 ## Repository continuity
 
-The monorepo continues the existing `BaksiLi/obsidian-inline-annotation` GitHub
+The monorepo continues the original `BaksiLi/obsidian-inline-annotation`
 repository (repository ID `1254119943`), renamed to `markdown-inline-annotation`.
-Its stars, issues, original release tags, and published Obsidian assets stay with
-the same repository. The already prepared monorepo history is merged into that
-repository without replacing its history.
+Its stars, issues, original release tags, published Obsidian releases, and
+download history stay with the same repository. The prepared monorepo history
+was merged into it without replacing its history.
 
-The short-lived new repository is retained as
-`BaksiLi/markdown-inline-annotation-migration`, an archived migration snapshot rather than
-a second development home. The 0.8.0 and 0.8.1 release attempts remained
-unpublished drafts; 0.8.2 is the first unified release.
+Do not recreate a repository under the old name: GitHub would stop redirecting
+the old URL, which older installations and the legacy Obsidian index still use.
+The former Obsidian repository is the monorepo itself and must not be archived.
+
+The 0.8.0 and 0.8.1 release attempts remained unpublished drafts; 0.8.2 is the
+first unified release.
 
 ## History
 
@@ -34,183 +36,108 @@ Old release tags are retained as `history/markdown-it/*`, `history/logseq/*`,
 
 ## Update channels
 
-- npm keeps `markdown-it-inline-annotation` and all documented exports. Its trusted publisher must point to this repository's `release.yml`.
-- Obsidian keeps `inline-annotation`. Root `manifest.json` and `versions.json` are generated mirrors of the plugin metadata. Releases use a bare semver tag with `main.js`, `manifest.json`, and `styles.css` assets.
-- Logseq keeps `logseq-furigana-ruby` and `_baksili_logseq-furigana-ruby`. Each release includes `logseq-furigana-ruby.zip`; the root icon serves the marketplace listing.
-- VS Code keeps publisher `baksili` and extension name `vscode-inline-annotation`. The VSIX includes the real core runtime rather than workspace symlinks.
+| Channel | Identity | Release input |
+| --- | --- | --- |
+| npm | `markdown-it-inline-annotation`, all documented exports | Tarball from the tagged workflow, published with provenance |
+| Obsidian | ID `inline-annotation`, display name **Inline Annotation (Ruby)** | Root `manifest.json` and `versions.json` (generated mirrors); `main.js`, `manifest.json`, `styles.css` under the bare semver tag |
+| Logseq | `logseq-furigana-ruby`, `_baksili_logseq-furigana-ruby` | `logseq-furigana-ruby.zip`; the root icon serves the marketplace listing |
+| VS Code | publisher `baksili`, extension `vscode-inline-annotation` | VSIX containing the real core runtime, not workspace symlinks |
 
-The former Obsidian repository is the monorepo itself and must not be archived.
-Its old URL redirects to the same repository; do not recreate a repository under
-that old name, which would replace the redirect. The Obsidian directory should
-still be updated to the canonical name, and its update URLs must be verified.
-The Logseq directory entry must point to the monorepo before archiving its former
-update endpoint. GitHub archive mode prevents future releases;
-archived repositories cannot act as ongoing release mirrors. Historical releases remain
-available for older installations. `npm run release:status` checks the live entries.
+No integration needs its own source repository. Obsidian reads its manifest from
+the repository root and assets from the matching version tag; the official
+directory scans each new GitHub release automatically. Logseq takes the first
+`.zip` release asset and reads plugin metadata inside it; its updater merges the
+current marketplace manifest over installed metadata, so a directory repository
+change reaches existing installations.
 
-Neither integration requires its own source repository. Obsidian requires its manifest
-at the repository root and assets under the matching version tag. Logseq selects the
-first `.zip` release asset and reads plugin metadata inside that archive; it does not
-need the monorepo's root package to be a Logseq plugin. Its updater merges the current
-marketplace manifest over installed metadata, allowing a directory repository change
-to take effect for existing installations.
+The Obsidian display name comes from the released `manifest.json`. The
+[manifest reference](https://docs.obsidian.md/Reference/Manifest#name) permits
+renaming while the ID stays fixed. Directory descriptions, categories, icon, and
+screenshots are edited on the
+[management page](https://community.obsidian.md/account/plugins/inline-annotation)
+and persist across releases.
 
-For Obsidian, the [official FAQ](https://docs.obsidian.md/community-directory/faq)
-directs repository transfers to a directory admin through `#community-directory`
-on Discord. This migration is a same-owner rename of the original repository.
-After the maintainer requested **Check for new releases** on November 18, 2026,
-the management page recognized `baksili/markdown-inline-annotation` and queued the
-`0.8.2` review. Its current-release sidebar still shows `0.4.0`, and the legacy
-`obsidianmd/obsidian-releases` directory JSON still contains the old repository
-name. The GitHub redirect preserves its metadata and asset URLs. Review the
-scan and verify the directory cutover before deciding whether admin assistance
-is necessary; no Discord request has been sent.
-For Logseq, change only `packages/logseq-furigana-ruby/manifest.json` in `logseq/marketplace`,
-preserving the directory name and all existing IDs. Generated `plugins.json` is not edited.
+Run `npm run release:status` for the live state of every channel.
 
 ## Publisher setup
 
-Both registries can trust this repository's GitHub Actions workflow directly:
+Both registries trust this repository's GitHub Actions workflow directly; no
+stored token or Azure application is used.
 
 | Service | Existing identity | Trusted repository | Workflow |
 | --- | --- | --- | --- |
 | npm | `markdown-it-inline-annotation` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 | VS Code Marketplace | publisher `baksili` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 
-For npm, configure the package's trusted publisher in its npm settings using the
-repository and workflow above. Leave the environment blank and explicitly allow
-direct `npm publish`; newly created policies otherwise default to staging only.
-The same setup is available through the CLI after maintainer login:
+For npm, the trusted publisher has no environment and explicitly allows direct
+`npm publish` (new policies otherwise default to staging only). The equivalent
+CLI setup is:
 
 ```sh
 npm trust github markdown-it-inline-annotation --file release.yml --repo BaksiLi/markdown-inline-annotation --allow-publish --yes
 ```
 
-For Marketplace, open **Manage Publishers**, select the existing `baksili`
-publisher, then add a GitHub policy under **Trusted Publishing** using the
-repository and workflow above. The release job uses `vsce publish --oidc` with
-`id-token: write`. This does not require an Azure app registration, tenant
-variables, or a stored access token. See the official
+For Marketplace, the existing `baksili` publisher has a GitHub policy under
+**Trusted Publishing**; the release job runs `vsce publish --oidc` with
+`id-token: write`. See the
 [Marketplace publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions)
 and [npm trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/).
 
-The [Logseq directory PR](https://github.com/logseq/marketplace/pull/965) changes
-only the existing entry's repository field. Keep the old Logseq repository
-available until that PR and the generated catalog have switched over.
+Both connections were completed and verified with 0.8.2: the registry tarball
+and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
 
-If Obsidian directory admin assistance is still needed, the prepared request is:
+## Open handover items
 
-> Please update the existing `inline-annotation` listing from
-> `baksili/obsidian-inline-annotation` to `BaksiLi/markdown-inline-annotation`.
-> This is a rename of the same GitHub repository, ID `1254119943`; the plugin
-> ID, original releases, stars, and community history are preserved.
-> Root `manifest.json` and `versions.json` remain available, and release
-> `0.8.2` provides `main.js`, `manifest.json`, and `styles.css` under its
-> matching bare semver tag. The old metadata and download URLs have been
-> verified to reach the same current files. Please preserve the existing
-> listing and download history.
+- **Logseq directory:** [logseq/marketplace#965](https://github.com/logseq/marketplace/pull/965)
+  changes only `packages/logseq-furigana-ruby/manifest.json`, preserving the
+  directory name and IDs; generated `plugins.json` is not edited. Keep the old
+  Logseq repository active until the PR merges and updates are verified, then
+  archive it. GitHub archive mode would block its releases, so it cannot serve
+  as an ongoing mirror.
+- **Obsidian legacy index:** `obsidianmd/obsidian-releases` still names the old
+  repository path, which redirects to this repository. The live directory
+  already recognizes the canonical repository. If an admin change is wanted,
+  the [official FAQ](https://docs.obsidian.md/community-directory/faq) routes
+  it through `#community-directory` on Discord.
+- **Logseq SDK advisory:** `@logseq/libs@0.0.17` ships a prebundled
+  `dist/lsplugin.user.js` embedding DOMPurify `2.3.8` and lodash `4.17.21`.
+  Dependency overrides cannot replace that code, and no official SDK release
+  fixes it. Obsidian's bundle does not contain the SDK. This needs a supported
+  SDK upgrade or a separately reviewed, reproducible rebuild.
 
-The request above has not been sent. The directory has discovered `0.8.2`, so
-include the pending review and canonical-repository recognition when asking for
-help rather than reporting that release discovery failed.
+## Obsidian review
 
-### Maintainer handover queue
-
-The maintainer completed both publisher connections on November 18, 2026
-(Asia/Taipei). npm and Marketplace publishing are verified.
-
-| Item | Current evidence | Remaining action |
-| --- | --- | --- |
-| npm | Public latest is `0.8.2`; the registry tarball is byte-for-byte identical to the original GitHub asset; a fresh registry install passed the core and markdown-it smoke checks | Complete |
-| VS Code Marketplace | Public latest is `0.8.2`; the downloaded Marketplace VSIX is byte-for-byte identical to the original GitHub asset; the old VS Code source repository is archived with migration guidance | Complete |
-| Obsidian directory | Signed-in management recognizes the canonical repository and has a pending `0.8.2` review; its current-release sidebar still shows `0.4.0`, and legacy directory JSON still names the old repository | Resolve review findings, verify the public release and directory cutover, then request admin assistance only if still needed |
-| Logseq directory | PR `logseq/marketplace#965` is open and not a draft; its WIP app still reports an old draft status; the generated catalog still names the old repository | The draft/ready events were retriggered and the documented `@wip ready for review` body marker added; wait for the external check/review and catalog update, verify updates, then archive the old Logseq repository |
-| Old source repositories | Migration notices are present; the temporary migration snapshot, old core, and old VS Code repositories are archived | Archive the old Logseq repository after its update-channel handover is verified |
-
-After the account steps, the release resume command in the root README reuses
-the original public artifacts. The code, packaging, and GitHub release do not
-need to be recreated.
-
-### Obsidian review findings
-
-The pending `0.8.2` review verifies the GitHub attestations for `main.js` and
-`styles.css`. It also scans other workspaces: its unsafe-`innerHTML` errors
-point to `plugins/logseq/src/parser.ts`, and its DOMPurify/lodash dependency
-warnings come from `@logseq/libs@0.0.17`. A local esbuild metafile confirmed
-that Obsidian's bundle contains only its own sources and the shared core; the
-rebuilt file is byte-for-byte identical to the `0.8.2` release artifact. The
-Logseq SDK dependencies are absent from that bundle, but their separate audit
-findings still need remediation.
-
-The review also warns about the root README title, existing CSS compatibility,
-and the non-Obsidian assets in the shared release. It explicitly says the extra
-assets will not be downloaded by Obsidian. Keep the project README and shared
-release identities intact while addressing relevant findings. The official
-directory supports **Review branch** to preview changes before publishing
-another release. Build-verification completion has not yet been observed.
-
-Listing descriptions are being tailored under the existing **Inline Ruby
-Annotation** name and `inline-annotation` ID. The draft has not been saved.
-The name is a display name, not a permanent identifier: the official
-[manifest reference](https://docs.obsidian.md/Reference/Manifest#name) permits
-updating plugin names through `manifest.json`. Any later naming change should
-preserve the existing ID and listing.
-
-Earlier verification on November 18, 2026 (Asia/Taipei):
-[full CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140612552)
-passed. The [0.8.2 resume run](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44140678700)
-downloaded and verified the original public artifacts successfully; npm rejected
-publishing authorization and Marketplace rejected the publisher token exchange.
-The existing GitHub release was skipped and its files were not replaced.
-
-The [latest 0.8.2 resume](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44147828227)
-verified the original artifacts and successfully submitted the VSIX using direct
-GitHub OIDC. Marketplace initially reported `Verifying`, then public lookup
-confirmed `0.8.2`. The downloaded Marketplace VSIX has SHA-256
-`cc04299667c90bd0caef0b663408a7a8bef9d367f1fdee255dba871b5fe75086`,
-identical to the original GitHub asset; extension and embedded core versions are
-both `0.8.2`, and their repository metadata points to the monorepo. The old VS Code
-repository was then archived, preserving its migration notice and historical releases.
-
-npm rejected that resume with `E404`; the maintainer subsequently clarified that
-the prepared connection had not yet been submitted. The tarball's repository URL,
-workflow OIDC permission, and runner's Node/npm versions were checked and are correct.
-All seven public GitHub asset IDs and digests remain unchanged.
-
-After the maintainer submitted the npm connection, retrying only the failed npm
-job completed the same release run successfully (attempt 2). Public npm latest
-became `0.8.2`, with integrity
-`sha512-YQh+ooaWwbtmvTUv1vArihgU0WCB9xyRT1vrf7g5BsweueozkfwFHBTYv6vDryx+vDoAXonlIx7vQuQgrkMImQ==`.
-The downloaded registry tarball is identical to the original GitHub asset and has
-provenance metadata. A clean temporary project installed the public package and
-markdown-it from npm; both the standalone core and markdown-it adapter correctly
-rendered `[artefact]^^((semi-)formal artefact)`. The old core repository was then
-archived, retaining its migration guidance and historical releases.
+The official scan covers the whole repository. In 0.8.3 the Logseq live
+renderer builds only its allowed elements, classes, and fixed styles through
+DOM operations, removing the flagged HTML assignments while keeping literal
+source HTML and entities as text. The branch preview of that change reported no
+errors. Remaining warnings are either intentional (the display-name change and
+the umbrella README title), outside the Obsidian bundle (Sätteri and VS Code
+types, the Logseq SDK), deliberate standard DOM use, or CSS `text-decoration`
+support notes for hosts older than the plugin's minimum app version.
 
 ## Daily workflow
 
-Use the root npm workspace and lockfile. The original standalone repositories are
-historical snapshots, not additional development branches. Change the syntax contract
-and shared corpus in the root, then update the integrations in the same change.
+Use the root npm workspace and lockfile. Change the syntax contract and shared
+corpus at the root, then update the integrations in the same change. Work on a
+short-lived branch, let CI and (for Obsidian-facing changes) the directory's
+**Review branch** preview run, merge to `main`, then tag.
 
-`npm run release:prepare -- patch|minor|major` synchronizes every version and dependency,
-Obsidian mirrors, and the lockfile. Review `RELEASE_NOTES.md`, commit, and push the matching
-tag. CI and release use the same validation and packaging commands.
+`npm run release:prepare -- patch|minor|major` synchronizes every version and
+dependency, the Obsidian mirrors, and the lockfile. Review `RELEASE_NOTES.md`,
+commit, and push the matching bare semver tag. CI and release use the same
+validation and packaging commands.
 
-## Local workspace cleanup
+## Local workspace
 
-The parent workspace now keeps the monorepo as its only development checkout.
-The five original repositories are preserved under `archive/standalone/`, with
-their Git histories, demos, and historical builds; only their ignored dependency
-directories were removed. Original writing drafts are under `drafts/`, and
-promotional media remain under `release-artifacts/`. The parent's README maps
-these locations. The monorepo's full check passed after moving the old checkouts.
+The parent workspace keeps the monorepo as its only development checkout. The
+five original repositories are preserved under `archive/standalone/` with their
+Git histories, demos, and historical builds. Writing drafts are under `drafts/`;
+promotional media and review evidence are under `release-artifacts/`.
 
 The temporary `markdown-inline-annotation-migration` repository was audited on
-November 18, 2026. It has no stars, forks, issues, pull requests, or releases.
-All implementation history is already in this monorepo; its only additional
-commit, `a413156`, replaces the README with migration guidance. No plugin update
-channel or publishing workflow depends on that temporary repository. A complete
-Git mirror, all four Actions runs' artifacts, logs, and repository metadata are
-preserved locally under `archive/migration-snapshot/`. The remote repository
-remains archived; deletion has not been performed.
+November 18, 2026: no stars, forks, issues, pull requests, releases, or
+dependent update channels, and no implementation history missing from this
+repository. A complete Git mirror, its Actions artifacts and logs, and
+repository metadata are preserved under `archive/migration-snapshot/`, after
+which the remote repository was deleted.

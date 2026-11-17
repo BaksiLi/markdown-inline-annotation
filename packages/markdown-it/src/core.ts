@@ -409,8 +409,8 @@ function renderRubyLevels(baseHtml: string, plainBase: string, op: AnnotationOp,
       return baseChars
         .map((char, i) => {
           const base = escapeHtml(char);
-          const a1 = ann1Parts![i];
-          const a2 = ann2Parts![i];
+          const a1 = ann1Parts[i];
+          const a2 = ann2Parts[i];
           const hide1 = shouldHideAnnotation(char, a1);
           const hide2 = shouldHideAnnotation(char, a2);
           if (hide1 && hide2) return renderEmptyRuby(base, innerPos, options);
@@ -426,7 +426,7 @@ function renderRubyLevels(baseHtml: string, plainBase: string, op: AnnotationOp,
       const inner = baseChars
         .map((char, i) => {
           const base = escapeHtml(char);
-          const ann = ann1Parts![i];
+          const ann = ann1Parts[i];
           return shouldHideAnnotation(char, ann)
             ? renderEmptyRuby(base, innerPos, options)
             : renderRubyElement(base, escapeHtml(ann), innerPos, options);
@@ -439,7 +439,7 @@ function renderRubyLevels(baseHtml: string, plainBase: string, op: AnnotationOp,
       const inner = baseChars
         .map((char, i) => {
           const base = escapeHtml(char);
-          const ann = ann2Parts![i];
+          const ann = ann2Parts[i];
           return shouldHideAnnotation(char, ann)
             ? renderEmptyRuby(base, outerPos, options)
             : renderRubyElement(base, escapeHtml(ann), outerPos, options);
@@ -562,7 +562,7 @@ function resolveSlots(op: AnnotationOp, ann: string, annStart: number, op2: Anno
   return { slots, overflow };
 }
 
-function parseBracketedAt(input: string, start: number, max: number, options: ResolvedOptions): InlineAnnotationModel | null {
+function parseBracketedAt(input: string, start: number, max: number): InlineAnnotationModel | null {
   if (input[start] !== "[" || isEscaped(input, start)) return null;
   const close = findBracketClose(input, start, max);
   if (close < 0) return null;
@@ -656,7 +656,7 @@ function parseAbbreviatedAt(input: string, start: number, max: number, options: 
 }
 
 function parseAt(input: string, start: number, max: number, options: ResolvedOptions): InlineAnnotationModel | null {
-  return parseBracketedAt(input, start, max, options) ?? parseAbbreviatedAt(input, start, max, options);
+  return parseBracketedAt(input, start, max) ?? parseAbbreviatedAt(input, start, max, options);
 }
 
 function isMarkdownBlocker(ch: string): boolean {

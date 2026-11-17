@@ -1,5 +1,7 @@
 # Inline Annotation for Markdown
 
+<img src="./icon.png" alt="Inline Annotation cat icon" width="64" height="64">
+
 Inline Annotation is a small Markdown extension for ruby/furigana, phonetic
 guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 
@@ -19,6 +21,11 @@ and integrations for markdown-it, Obsidian, VS Code, and Logseq.
 *The original Logseq showcase. See the [Logseq guide](plugins/logseq/) for
 host-specific behavior and copyable examples.*
 
+<img src="./plugins/obsidian/assets/obsidian-reading-glosses.jpg" alt="Inline Annotation (Ruby) in Obsidian: original terms and translations above and below Chinese prose, with per-character phonetic readings and grouped glosses." width="560">
+
+*Inline Annotation (Ruby) in Obsidian. The [Obsidian guide](plugins/obsidian/)
+includes Reading-view and Live Preview screenshots.*
+
 The syntax is **v2**. The [specification](SPEC.md) defines its grammar, escaping,
 source ranges, and rendering contract; the [shared fixtures](fixtures/) keep
 implementations aligned. This is a proposal with working implementations.
@@ -28,7 +35,7 @@ implementations aligned. This is a proposal with working implementations.
 | Project | Where to get it | Integration |
 | --- | --- | --- |
 | `markdown-it-inline-annotation` | [npm](https://www.npmjs.com/package/markdown-it-inline-annotation) · [guide](packages/markdown-it/) | Reference parser/model, HTML renderer, and markdown-it plugin |
-| Inline Ruby Annotation for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
+| Inline Annotation (Ruby) for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |

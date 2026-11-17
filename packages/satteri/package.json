@@ -1,6 +1,6 @@
 {
   "name": "satteri-inline-annotation",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Satteri adapter for the Inline Annotation syntax and canonical renderer.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,7 +33,7 @@
   "author": "Baksi Li",
   "license": "MIT",
   "dependencies": {
-    "markdown-it-inline-annotation": "^0.8.2"
+    "markdown-it-inline-annotation": "^0.8.3"
   },
   "peerDependencies": {
     "satteri": ">=0.9.5 <1"

@@ -19,6 +19,17 @@ host adapters.
 All workspaces now share one product release version. Syntax remains v2.
 The historical milestones below retain their original package version numbers.
 
+## Open Logseq follow-ups
+
+- Replace the SDK's embedded vulnerable dependencies through a supported
+  upstream release or a separately reviewed, reproducible rebuild. Lockfile
+  overrides alone do not alter its prebundled JavaScript.
+- Preserve escapes across the independent renderer's repeated passes.
+  `[a\^^(b)]^_(.-)` can reinterpret an escaped operator, and
+  `[\[y\]^^(b)]^_(.-)` can produce malformed HTML. The new live DOM builder
+  leaves malformed output as original text; the string conversion API still
+  needs a separate correction and conformance coverage.
+
 ## Contracts
 
 The stable [v2 spec](../SPEC.md) owns:
@@ -136,8 +147,10 @@ The public model names and UTF-16, zero-based, end-exclusive range invariants
 are now fixed in v2 and covered by model fixtures. Before extraction:
 
 - decide whether fixtures live with the neutral core or in a small conformance
-  package;
-- automate release tags and adapter update checks.
+  package.
+
+Tagged releases and cross-integration dependency updates are already handled by
+the monorepo's shared version and `release.yml`.
 
 The markdown-it package should then become a small adapter depending on the
 neutral core.
@@ -180,5 +193,6 @@ SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/satteri/
 plugins/obsidian/  plugins/logseq/  plugins/vscode/  scripts/
 ```
 
-Brand: **Inline Annotation**. Host listings may use **Inline Ruby Annotation**
-for discoverability. Canonical spelling: `bouten`.
+Brand: **Inline Annotation**. Host listings may add "Ruby" for discoverability:
+Obsidian uses **Inline Annotation (Ruby)**; the VS Code listing keeps its
+established **Inline Ruby Annotation**. Canonical spelling: `bouten`.

@@ -19,7 +19,7 @@ const logseq = JSON.parse(capture("gh", ["api",
   "repos/logseq/marketplace/contents/plugins.json",
   "-H", "Accept: application/vnd.github.raw+json"]));
 for (const [host, entry] of [
-  ["Obsidian", obsidian.find((item) => item.id === "inline-annotation")],
+  ["Obsidian legacy index", obsidian.find((item) => item.id === "inline-annotation")],
   ["Logseq", logseq.packages.find((item) => item.id === "logseq-furigana-ruby")],
 ]) {
   const ready = entry?.repo?.toLowerCase() === home;
@@ -32,3 +32,5 @@ for (const [host, entry] of [
   }
   console.log(`${host}: ${entry?.repo ?? "not found"} (${state})`);
 }
+console.log("Obsidian's live listing and review can advance before the legacy index.");
+console.log("Review status: https://community.obsidian.md/account/plugins/inline-annotation");

@@ -9,7 +9,7 @@ import {
   anyToHTML,
 } from "./parser";
 
-async function main() {
+function main() {
   // ---------------------------------------------------------------------------
   // CSS
   // ---------------------------------------------------------------------------
@@ -112,10 +112,12 @@ async function main() {
   // Helpers
   // ---------------------------------------------------------------------------
   async function updateBlock(uuid: string, content: string) {
-    // @ts-expect-error — logseq.api.update_block avoids property-loss bug
-    if (logseq.api?.update_block) {
-      // @ts-expect-error
-      await logseq.api.update_block(uuid, content);
+    // The legacy API avoids property loss but is absent from the SDK types.
+    const legacyApi = (logseq as typeof logseq & {
+      api?: { update_block?: (uuid: string, content: string) => Promise<unknown> };
+    }).api;
+    if (typeof legacyApi?.update_block === "function") {
+      await legacyApi.update_block(uuid, content);
       return;
     }
     await logseq.Editor.updateBlock(uuid, content);
@@ -143,7 +145,7 @@ async function main() {
         count++;
       }
     }
-    logseq.UI.showMsg(count > 0 ? `${label}: ${count} block(s)` : `${label}: nothing to convert`);
+    await logseq.UI.showMsg(count > 0 ? `${label}: ${count} block(s)` : `${label}: nothing to convert`);
   }
 
   // ---------------------------------------------------------------------------
@@ -180,7 +182,7 @@ async function main() {
       for (const added of m.addedNodes) {
         if (added.nodeType !== Node.ELEMENT_NODE) continue;
         const el = added as HTMLElement;
-        for (const block of el.querySelectorAll("div.block-content") as NodeListOf<HTMLElement>) {
+        for (const block of el.querySelectorAll<HTMLElement>("div.block-content")) {
           if (hasRuby(block.innerHTML)) replaceRubyInElement(block);
         }
       }
@@ -189,11 +191,9 @@ async function main() {
 
   observer.observe(top!.document.body, { childList: true, subtree: true });
 
-  for (const block of top!.document.querySelectorAll("div.block-content") as NodeListOf<HTMLElement>) {
+  for (const block of top!.document.querySelectorAll<HTMLElement>("div.block-content")) {
     replaceRubyInElement(block);
   }
-
-  console.info("logseq-furigana-ruby loaded");
 }
 
 logseq.ready(main).catch(console.error);

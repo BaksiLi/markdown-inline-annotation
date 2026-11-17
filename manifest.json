@@ -1,9 +1,9 @@
 {
   "id": "inline-annotation",
-  "name": "Inline Ruby Annotation",
-  "version": "0.8.2",
+  "name": "Inline Annotation (Ruby)",
+  "version": "0.8.3",
   "minAppVersion": "1.5.0",
-  "description": "Render [base]^^(ruby) and [base]^_(under) as ruby, furigana, bouten, underline, and two-slot glosses.",
+  "description": "Add ruby (furigana), translations, bouten, and line marks with [base]^^(ruby) and [base]^_(under) syntax.",
   "author": "Baksi Li",
   "isDesktopOnly": false
 }
