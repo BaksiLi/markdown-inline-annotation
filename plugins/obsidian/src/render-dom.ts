@@ -1,9 +1,12 @@
 import {
+  classifyInlineAnnotationSlot,
   findInlineAnnotationModels,
   type AnnotationOp,
   type AnnotationPosition,
   type InlineAnnotationModel,
   type InlineAnnotationOptions,
+  type InlineAnnotationDecoration as DecorationSlot,
+  type InlineAnnotationSlotContent as ClassifiedSlot,
   type UnderlineStyle,
 } from "markdown-it-inline-annotation/core";
 
@@ -13,12 +16,6 @@ interface ResolvedOptions {
   spaceAlignment: "always" | "auto" | "off";
   fallbackParens: string;
 }
-
-type DecorationSlot =
-  | { kind: "bouten"; position: AnnotationPosition }
-  | { kind: "line"; position: AnnotationPosition; style: UnderlineStyle };
-
-type ClassifiedSlot = DecorationSlot | { kind: "ruby"; raw: string };
 
 interface ClassifiedEntry {
   slot: {
@@ -33,12 +30,6 @@ interface RubyEntry {
   };
   value: { kind: "ruby"; raw: string };
 }
-
-const UNDERLINE_STYLES: Record<string, UnderlineStyle> = {
-  ".-": "solid",
-  ".~": "wavy",
-  ".=": "double",
-};
 
 function resolveOptions(options?: InlineAnnotationOptions): ResolvedOptions {
   const resolved: ResolvedOptions = {
@@ -97,13 +88,6 @@ function lineClass(options: ResolvedOptions, position: AnnotationPosition, style
   const keyword = lineKeyword(position);
   const base = className(options, keyword);
   return style === "solid" ? base : `${base} ${className(options, `${keyword}-${style}`)}`;
-}
-
-function classifySlot(raw: string, position: AnnotationPosition): ClassifiedSlot {
-  if (raw === "..") return { kind: "bouten", position };
-  const style = UNDERLINE_STYLES[raw];
-  if (style) return { kind: "line", position, style };
-  return { kind: "ruby", raw };
 }
 
 function appendText(fragment: DocumentFragment, text: string): void {
@@ -339,7 +323,10 @@ export function renderInlineAnnotationModelToFragment(
   const options = resolveOptions(rawOptions);
   const baseRaw = model.base.raw;
   const plainBase = hasInlineAnnotation(baseRaw, options) ? "" : stripInlineAnnotationMarkup(baseRaw, options);
-  const classified: ClassifiedEntry[] = model.slots.map((slot) => ({ slot, value: classifySlot(slot.raw, slot.position) }));
+  const classified: ClassifiedEntry[] = model.slots.map((slot) => ({
+    slot,
+    value: classifyInlineAnnotationSlot(slot.raw, slot.position),
+  }));
   const decorations = classified
     .map(({ value }) => value)
     .filter((slot): slot is DecorationSlot => slot.kind !== "ruby");

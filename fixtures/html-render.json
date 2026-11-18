@@ -131,6 +131,14 @@
       "assertionType": "semantic"
     },
     {
+      "id": "ruby-object-property-glosses",
+      "category": "ruby",
+      "name": "Ordinary glosses that coincide with object properties stay ruby text",
+      "assertionType": "semantic",
+      "input": "[term]^^(constructor) [term]^_(toString)",
+      "contains": ["<rt>constructor</rt>", "<rt>toString</rt>"]
+    },
+    {
       "id": "ruby-mixed-chain",
       "category": "slots",
       "name": "mixed chained annotation",
