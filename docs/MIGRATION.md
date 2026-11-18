@@ -13,7 +13,7 @@ download history stay with the same repository. The prepared monorepo history
 was merged into it without replacing its history.
 
 Do not recreate a repository under the old name: GitHub would stop redirecting
-the old URL, which older installations and the legacy Obsidian index still use.
+the old URL, which older installations may still use.
 The former Obsidian repository is the monorepo itself and must not be archived.
 
 The 0.8.0 and 0.8.1 release attempts remained unpublished drafts; 0.8.2 is the
@@ -39,6 +39,7 @@ Old release tags are retained as `history/markdown-it/*`, `history/logseq/*`,
 | Channel | Identity | Release input |
 | --- | --- | --- |
 | npm | `markdown-it-inline-annotation`, all documented exports | Tarball from the tagged workflow, published with provenance |
+| npm | `marked-inline-annotation` | Standalone tarball for Marked; subsequent tagged releases follow the core |
 | Obsidian | ID `inline-annotation`, display name **Inline Annotation (Ruby)** | Root `manifest.json` and `versions.json` (generated mirrors); `main.js`, `manifest.json`, `styles.css` under the bare semver tag |
 | Logseq | `logseq-furigana-ruby`, `_baksili_logseq-furigana-ruby` | `logseq-furigana-ruby.zip`; the root icon serves the marketplace listing |
 | VS Code | publisher `baksili`, extension `vscode-inline-annotation` | VSIX containing the real core runtime, not workspace symlinks |
@@ -67,6 +68,7 @@ stored token or Azure application is used.
 | Service | Existing identity | Trusted repository | Workflow |
 | --- | --- | --- | --- |
 | npm | `markdown-it-inline-annotation` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
+| npm | `marked-inline-annotation` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 | VS Code Marketplace | publisher `baksili` | `BaksiLi/markdown-inline-annotation` | `release.yml` |
 
 For npm, the trusted publisher has no environment and explicitly allows direct
@@ -83,7 +85,7 @@ For Marketplace, the existing `baksili` publisher has a GitHub policy under
 [Marketplace publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#publishing-extensions)
 and [npm trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/).
 
-Both connections were completed and verified with 0.8.2: the registry tarball
+The core and Marketplace connections were verified with 0.8.2: the registry tarball
 and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
 
 ## Open handover items
@@ -94,11 +96,10 @@ and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
   Logseq repository active until the PR merges and updates are verified, then
   archive it. GitHub archive mode would block its releases, so it cannot serve
   as an ongoing mirror.
-- **Obsidian directory:** the live directory recognizes the canonical
-  repository. On November 18, 2026, `inline-annotation` was absent from
-  `obsidianmd/obsidian-releases/community-plugins.json` while its live listing
-  and update channel remained available; do not interpret that legacy file
-  alone as the listing's status. Old repository URLs still redirect here.
+- **Obsidian directory:** both the live listing and the community plugin index
+  use **Inline Annotation (Ruby)**, ID `inline-annotation`, in the canonical
+  repository.
+- **Marked directory:** [Known Extensions submission](https://github.com/markedjs/marked/pull/4256).
 - **Logseq SDK advisory:** `@logseq/libs@0.0.17` ships a prebundled
   `dist/lsplugin.user.js` embedding DOMPurify `2.3.8` and lodash `4.17.21`.
   Dependency overrides cannot replace that code, and no official SDK release

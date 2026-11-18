@@ -45,7 +45,7 @@ implementations aligned. This is a proposal with working implementations.
 | Inline Annotation (Ruby) for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
-| `marked-inline-annotation` | [Package guide](packages/marked/) | Inline tokenizer for Marked 18 |
+| `marked-inline-annotation` | [npm](https://www.npmjs.com/package/marked-inline-annotation) · [guide](packages/marked/) | Inline tokenizer for Marked 18 |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
 
 ## Install
@@ -144,7 +144,7 @@ npm run release:pack
 ```
 
 `check` runs all five integrations and package checks. `release:pack` then creates and
-verifies the npm tarball, Logseq ZIP, Obsidian assets, VSIX, and checksums in `artifacts/`.
+verifies both npm tarballs, Logseq ZIP, Obsidian assets, VSIX, and checksums in `artifacts/`.
 It needs `zip` and `unzip`, available on macOS and the Linux CI runner.
 
 Run a single integration with `npm run test --workspace plugins/logseq`, for example.

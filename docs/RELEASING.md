@@ -27,19 +27,20 @@ same verified files. The bare tag supports Obsidian's exact-version lookup and
 Logseq's latest-release discovery. Versions are synchronized across workspaces;
 syntax revisions are specified separately.
 
-GitHub assets, npm, and VS Code Marketplace publish in separate jobs. npm uses
-a trusted publisher for `BaksiLi/markdown-inline-annotation`, workflow
-`release.yml`. Marketplace uses GitHub OIDC with a Trusted Publishing policy on
-the existing `baksili` publisher for the same repository and workflow. Each npm package needs its own trust connection. For the first Marked release,
-publish the verified standalone tarball, then authorize `release.yml` for
-`marked-inline-annotation`. Subsequent tags publish the core first, then the
-Marked adapter. The original 0.8.4 GitHub asset set predates this adapter. See [publisher setup](MIGRATION.md#publisher-setup).
+Each npm package trusts `BaksiLi/markdown-inline-annotation` and the workflow
+`release.yml`. Tagged releases publish the core first, then the Marked adapter.
+Marketplace uses GitHub OIDC for the same workflow and the `baksili` publisher.
+
+The first Marked tarball (0.8.4) was published separately from the
+[main CI build](https://github.com/BaksiLi/markdown-inline-annotation/actions/runs/44242005815).
+Its registry integrity matches the CI artifact. For this version, the original
+GitHub Release contains only the core npm tarball. See [publisher setup](MIGRATION.md#publisher-setup).
 
 ## Verify
 
 - Check every job in the tagged Release workflow.
 - Download the GitHub assets and verify `SHA256SUMS`.
-- Compare the npm tarball and Marketplace VSIX with their GitHub assets.
+- Compare both npm tarballs and the Marketplace VSIX with their GitHub assets.
 - Check the Obsidian directory's version, automated review, and enabled install
   button. Its scan may lag behind the GitHub release.
 - Check the Logseq directory handover before archiving its original repository.
@@ -51,7 +52,7 @@ npm run release:status
 ```
 
 The status command leads with total cross-platform downloads, then each
-platform's own counter: Obsidian's official cumulative count; npm since first
+platform's own counter: Obsidian's official cumulative count; npm core downloads since first
 publication and for the last
 reported month; Marketplace downloads and installs separately; and Logseq ZIP
 downloads across the old and current repositories. It also reports stars,
