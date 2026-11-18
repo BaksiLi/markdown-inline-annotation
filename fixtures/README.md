@@ -48,8 +48,8 @@ wrappers independently. They should also avoid inputs where default rendering
 policy changes the asserted structure; put those cases under `rendering-policy`
 with explicit `options` instead.
 
-These files are canonical in the markdown-it package until the core and
-conformance data move to a neutral package or monorepo.
+The root `fixtures/` directory is canonical. The core package includes a copy
+for consumers outside this repository.
 
 ## Model and Range Contract
 
@@ -66,13 +66,8 @@ reports JavaScript UTF-16 offsets.
 
 ## Sync Policy
 
-Npm-based adapters should import published fixture exports that match their
-locked core version. An independent parser such as Logseq may keep a checked-in
-copy, but the source version must remain traceable and fixture updates must be
-reviewed explicitly rather than silently diverging.
-
-Long term, a neutral core/conformance package or monorepo should provide one
-fixture source to every adapter.
+Workspace adapters can read the root corpus directly. External adapters can
+import the fixture exports from their installed core version.
 
 Add host-neutral cases here first. If a case depends on a host parser, command
 workflow, DOM timing, or editor-specific escaping behavior, keep it in that

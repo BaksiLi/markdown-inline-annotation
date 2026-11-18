@@ -3,9 +3,11 @@
 <img src="./icon.png" alt="Inline Annotation cat icon" width="64" height="64">
 
 [![npm version](https://img.shields.io/npm/v/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
-[![npm downloads per month](https://img.shields.io/npm/dm/markdown-it-inline-annotation)](https://www.npmjs.com/package/markdown-it-inline-annotation)
-[![Obsidian downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24%5B%22inline-annotation%22%5D.downloads&label=Obsidian%20downloads&color=7c6f48)](https://community.obsidian.md/plugins/inline-annotation)
+[![Cross-platform downloads: 3.3k+](https://img.shields.io/badge/cross--platform_downloads-3.3k%2B-397d54)](docs/RELEASING.md#download-counts)
 [![CI](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml/badge.svg)](https://github.com/BaksiLi/markdown-inline-annotation/actions/workflows/ci.yml)
+
+Downloads across Obsidian, npm, VS Code, and Logseq
+([2026-11-18 snapshot](docs/RELEASING.md#download-counts)).
 
 Inline Annotation is a small Markdown extension for ruby/furigana, phonetic
 guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
@@ -19,7 +21,7 @@ guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 It implements the syntax proposed by Baksi Li in
 [Ruby (Furigana) Syntax in Markdown](https://blog.baksili.codes/markdown-ruby).
 The original Logseq implementation grew into a shared syntax, reference parser,
-and integrations for markdown-it, Obsidian, VS Code, and Logseq.
+and integrations for markdown-it, Marked, Obsidian, VS Code, and Logseq.
 
 <img src="./plugins/logseq/assets/logseq_showcase.png" alt="Inline Annotation in Logseq: Markdown source beside rendered furigana, phonetic glosses above and below, bouten, underlines, per-character readings, and nested ruby." width="560">
 
@@ -31,7 +33,7 @@ host-specific behavior and copyable examples.*
 *Inline Annotation (Ruby) in Obsidian. The [Obsidian guide](plugins/obsidian/)
 includes Reading-view and Live Preview screenshots.*
 
-The syntax is **v2**. The [specification](SPEC.md) defines its grammar, escaping,
+The [specification](SPEC.md) defines its grammar, escaping,
 source ranges, and rendering contract; the [shared fixtures](fixtures/) keep
 implementations aligned. This is a proposal with working implementations.
 
@@ -43,6 +45,7 @@ implementations aligned. This is a proposal with working implementations.
 | Inline Annotation (Ruby) for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
+| `marked-inline-annotation` | [Package guide](packages/marked/) | Inline tokenizer for Marked 18 |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
 
 ## Install
@@ -105,7 +108,7 @@ Space-separated readings can align per character:
 ```
 
 Annotation parentheses must balance; use `\(` or `\)` for standalone literal
-parentheses. See [the v2 specification](SPEC.md) for the complete grammar and
+parentheses. See [the specification](SPEC.md) for the complete grammar and
 compatibility notes, including migration from the earlier first-close rule.
 
 The [playground](packages/markdown-it/examples/playground.html) and
@@ -161,15 +164,15 @@ and retries.
 npm run release:status
 ```
 
-This reports live download counts, stars, and directory handover status from
-the platform sources. Downloads and installs are shown separately, with npm's
-reporting dates; these are activity counters, not unique-user counts.
+This reports total cross-platform downloads, the platform breakdown, stars,
+and directory handover status. Monthly downloads and installs remain separate;
+these are activity counters, not unique-user counts.
 
 All integrations now share this monorepo, continuing the original Obsidian
 repository with its stars, history, plugin IDs, and update channels preserved
 ([migration details](docs/MIGRATION.md)).
 
-Further reading: [roadmap](docs/ROADMAP.md) · [v2 design rationale](docs/v2-rationale.md)
+Further reading: [roadmap](docs/ROADMAP.md) · [design history](docs/v2-rationale.md)
 · [adapter contract and future ports](docs/ADAPTERS.md).
 
 ## License

@@ -36,12 +36,23 @@ export async function fetchJson(url, options = {}) {
   return response.json();
 }
 
+export function aggregateDownloads(stats) {
+  const available = stats.filter((item) => item.error === undefined);
+  return {
+    downloads: available.reduce((total, item) =>
+      total + count(item.downloads, `${item.source} downloads`), 0),
+    availableSources: available.length,
+    totalSources: stats.length,
+  };
+}
+
 export async function downloadStats(github, getJson = fetchJson) {
   const sources = [
     ["Obsidian", async () => {
       const stats = await getJson(
         "https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugin-stats.json");
-      return `${count(stats["inline-annotation"]?.downloads, "Obsidian downloads").toLocaleString("en-US")} downloads (official cumulative count)`;
+      const downloads = count(stats["inline-annotation"]?.downloads, "Obsidian downloads");
+      return { downloads, text: `${downloads.toLocaleString("en-US")} downloads (official cumulative count)` };
     }],
     ["npm", async () => {
       const [metadata, month] = await Promise.all([
@@ -55,7 +66,7 @@ export async function downloadStats(github, getJson = fetchJson) {
           `https://api.npmjs.org/downloads/point/${from}:${to}/${packageName}`)));
       const total = periods.reduce((sum, period) =>
         sum + count(period.downloads, "npm period downloads"), 0);
-      return `${total.toLocaleString("en-US")} downloads since ${start} through ${month.end}; ${monthly.toLocaleString("en-US")} in ${month.start} to ${month.end}`;
+      return { downloads: total, text: `${total.toLocaleString("en-US")} downloads since ${start} through ${month.end}; ${monthly.toLocaleString("en-US")} in ${month.start} to ${month.end}` };
     }],
     ["VS Code", async () => {
       const data = await getJson(
@@ -74,7 +85,8 @@ export async function downloadStats(github, getJson = fetchJson) {
         .find((item) => `${item.publisher.publisherName}.${item.extensionName}` === extensionId);
       const stats = new Map(extension?.statistics?.map(
         (item) => [item.statisticName, item.value]));
-      return `${count(stats.get("downloadCount"), "Marketplace downloads").toLocaleString("en-US")} downloads; ${count(stats.get("install"), "Marketplace installs").toLocaleString("en-US")} installs (separate Marketplace metrics)`;
+      const downloads = count(stats.get("downloadCount"), "Marketplace downloads");
+      return { downloads, text: `${downloads.toLocaleString("en-US")} downloads; ${count(stats.get("install"), "Marketplace installs").toLocaleString("en-US")} installs (separate Marketplace metrics)` };
     }],
     ["Logseq", async () => {
       const [previous, current] = await Promise.all([
@@ -83,11 +95,12 @@ export async function downloadStats(github, getJson = fetchJson) {
       ]);
       const oldCount = logseqDownloadCount(previous);
       const newCount = logseqDownloadCount(current);
-      return `${(oldCount + newCount).toLocaleString("en-US")} ZIP downloads (${oldCount} original repo + ${newCount} current repo)`;
+      const downloads = oldCount + newCount;
+      return { downloads, text: `${downloads.toLocaleString("en-US")} ZIP downloads (${oldCount} original repo + ${newCount} current repo)` };
     }],
   ];
   const results = await Promise.allSettled(sources.map(([, load]) => load()));
   return results.map((result, index) => result.status === "fulfilled"
-    ? { source: sources[index][0], text: result.value }
+    ? { source: sources[index][0], ...result.value }
     : { source: sources[index][0], error: result.reason.message });
 }

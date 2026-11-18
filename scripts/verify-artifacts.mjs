@@ -4,12 +4,13 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { capture, npm, readJson, root, run } from "./lib.mjs";
-import { releaseAssetNames, verifyReleaseChecksums } from "./release-assets.mjs";
+import { hasPublishedMarkedAsset, releaseAssetNames, verifyReleaseChecksums } from "./release-assets.mjs";
 
 const version = readJson("package.json").version;
 const artifacts = resolve(root, "artifacts");
 const published = process.argv.includes("--published");
-if (published) verifyReleaseChecksums(artifacts, version);
+const withMarked = !published || hasPublishedMarkedAsset(version);
+if (published) verifyReleaseChecksums(artifacts, version, withMarked);
 const tarball = resolve(artifacts, `markdown-it-inline-annotation-${version}.tgz`);
 const logseq = resolve(artifacts, "logseq-furigana-ruby.zip");
 const vsix = resolve(artifacts, `vscode-inline-annotation-${version}.vsix`);
@@ -44,14 +45,30 @@ try {
     assert.match(renderInlineAnnotationsToHtml("[x]^^((semi-)formal artefact)"), /\\(semi-\\)formal artefact/);
     assert.ok(require("markdown-it-inline-annotation/fixtures/models.json").cases.length);
   `], { cwd: consumer });
+  if (withMarked) {
+    const markedArchive = resolve(artifacts, `marked-inline-annotation-${version}.tgz`);
+    const manifest = JSON.parse(capture("tar", ["-xOf", markedArchive, "package/package.json"]));
+    assert.equal(manifest.name, "marked-inline-annotation");
+    assert.equal(manifest.version, version);
+    assert.equal(manifest.dependencies[corePackage.name], `^${version}`);
+    run(npm, ["install", "--offline", "--install-links", "--ignore-scripts", "--no-package-lock",
+      "--no-audit", "--no-fund", tarball, markedArchive, resolve(root, "node_modules/marked")], { cwd: consumer });
+    run(process.execPath, ["--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { Marked } from "marked";
+      import inlineAnnotation from "marked-inline-annotation";
+      const html = new Marked(inlineAnnotation()).parseInline("[gloss]^^((semi-)formal artefact)");
+      assert.ok(html.includes("<rt>(semi-)formal artefact</rt>"));
+    `], { cwd: consumer });
+  }
 } finally {
   rmSync(consumer, { recursive: true, force: true });
 }
 const names = readdirSync(artifacts).filter((name) => name !== "SHA256SUMS").sort();
-assert.deepEqual(names, releaseAssetNames(version).filter((name) => name !== "SHA256SUMS"));
+assert.deepEqual(names, releaseAssetNames(version, withMarked).filter((name) => name !== "SHA256SUMS"));
 if (!published) {
   writeFileSync(resolve(artifacts, "SHA256SUMS"), names.map((name) =>
     `${createHash("sha256").update(readFileSync(resolve(artifacts, name))).digest("hex")}  ${name}\n`).join(""));
 }
-verifyReleaseChecksums(artifacts, version);
+verifyReleaseChecksums(artifacts, version, withMarked);
 console.log(`Verified ${version}: standalone npm core, Logseq ZIP, Obsidian assets, and VSIX runtime.`);

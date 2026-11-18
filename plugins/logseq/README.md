@@ -8,8 +8,8 @@ bouten, overlines, and underlines using `[base]^^(ruby)` and
 
 The portable grammar and `ia-*` HTML class contract live in the
 [Inline Annotation spec](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md).
-This plugin keeps an independent parser plus Logseq-specific macros and
-conversion commands.
+The plugin bundles the shared parser for inline markup and supplies the
+Logseq macros, conversion commands, and live DOM rendering.
 
 ## Syntax
 
@@ -34,7 +34,7 @@ Escaped `\|`, `\(`, `\)`, `\[`, and `\]` stay literal when the Logseq parser has
 already consumed the backslash. See the
 [full showcase](./assets/logseq_inline_annotation.md) for copyable examples.
 
-This v2 revision balances parentheses inside annotation text.
+Parentheses inside annotation text must balance.
 Unbalanced input stays literal.
 Older converter output such as `[base]^^((semi-\)formal artefact)` needs either
 natural paired parentheses (`[base]^^((semi-)formal artefact)`) or both sides

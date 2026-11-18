@@ -1,7 +1,7 @@
 # markdown-it-inline-annotation
 
 Reference parser, HTML renderer, and `markdown-it` adapter for **Inline
-Annotation v2**: a stable syntax for visible ruby/furigana, over/under glosses,
+Annotation**, a stable syntax for visible ruby/furigana, over/under glosses,
 bouten, overlines, and underlines in Markdown.
 
 ```markdown
@@ -79,7 +79,7 @@ class contract, and host-boundary requirements.
 
 Annotation parentheses must balance; use `\(` or `\)` for standalone literal
 parentheses.
-This v2 revision changes the earlier first-unescaped-`)` delimiter rule.
+Balanced parentheses replace the earlier first-unescaped-`)` delimiter rule.
 Old converter output that escaped only right parentheses needs both sides
 escaped, or the natural balanced spelling shown above.
 

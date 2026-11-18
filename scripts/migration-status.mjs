@@ -1,5 +1,5 @@
 import { capture } from "./lib.mjs";
-import { downloadStats } from "./download-stats.mjs";
+import { aggregateDownloads, downloadStats } from "./download-stats.mjs";
 
 const home = "baksili/markdown-inline-annotation";
 const github = async (endpoint, paginate = false) => {
@@ -9,12 +9,19 @@ const github = async (endpoint, paginate = false) => {
   return paginate ? data.flat() : data;
 };
 console.log(`Reach (queried ${new Date().toISOString()})`);
-for (const result of await downloadStats(github)) {
+const stats = await downloadStats(github);
+const { downloads, availableSources, totalSources } = aggregateDownloads(stats);
+const coverage = `${availableSources}/${totalSources} sources`;
+const total = availableSources === 0 ? "unavailable"
+  : `${availableSources < totalSources ? "at least " : ""}${downloads.toLocaleString("en-US")}`;
+console.log(`Cross-platform downloads: ${total} (${coverage})`);
+for (const result of stats) {
   console.log(`${result.source}: ${result.error ? `unavailable (${result.error})` : result.text}`);
   if (result.error) process.exitCode = 1;
 }
 console.log("Downloads include repeat downloads, updates, and automation; these are not unique users.");
-console.log("Platform counters use different definitions and refresh times; no cross-platform total is reported.\n");
+console.log("The total sums cumulative download counters; monthly downloads and installs are not added again.");
+console.log("Platform counters use different definitions and refresh times.\n");
 
 const canonical = JSON.parse(capture("gh", ["api", `repos/${home}`]));
 console.log(`Home: ${canonical.full_name} (repository ${canonical.id})`);

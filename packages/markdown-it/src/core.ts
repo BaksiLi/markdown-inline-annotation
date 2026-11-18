@@ -474,42 +474,12 @@ function renderRubyLevels(baseHtml: string, plainBase: string, op: AnnotationOp,
   return baseHtml;
 }
 
-function sourceBase(source: string): string {
-  if (source[0] === "[") {
-    const close = findBracketClose(source, 0, source.length);
-    return close > 0 ? source.slice(1, close) : "";
-  }
-
-  for (let i = 0; i < source.length; i++) {
-    if (opAt(source, i, source.length)) return source.slice(0, i);
-  }
-
-  return "";
-}
-
-function stripInlineAnnotationMarkup(input: string, options: ResolvedOptions): string {
-  let plain = "";
-  let pos = 0;
-
-  while (pos < input.length) {
-    const match = findInlineAnnotation(input, pos, input.length, options);
-    if (!match) {
-      plain += unescapeMarkup(input.slice(pos));
-      break;
-    }
-    plain += unescapeMarkup(input.slice(pos, match.start));
-    plain += stripInlineAnnotationMarkup(sourceBase(match.source), options);
-    pos = match.end;
-  }
-
-  return plain;
-}
-
 export function renderInlineAnnotationModelToHtml(model: InlineAnnotationModel, rawOptions?: InlineAnnotationOptions): string {
   const options = resolveOptions(rawOptions);
   const baseRaw = model.base.raw;
-  const baseHtml = renderInlineAnnotationsToHtml(baseRaw, options);
-  const plainBase = hasInlineAnnotation(baseRaw) ? "" : stripInlineAnnotationMarkup(baseRaw, options);
+  const nested = hasInlineAnnotation(baseRaw);
+  const baseHtml = nested ? renderInlineAnnotationsToHtml(baseRaw, options) : escapedText(baseRaw);
+  const plainBase = nested ? "" : unescapeMarkup(baseRaw);
   const overflowHtml = model.overflow.map((range) => escapedText(range.raw)).join("");
   const classified = model.slots.map((slot) => ({ slot, value: classifySlot(slot.raw, slot.position) }));
   const decorations = classified

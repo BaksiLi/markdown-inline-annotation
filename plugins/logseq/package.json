@@ -27,7 +27,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@logseq/libs": "^0.0.17"
+    "@logseq/libs": "^0.0.17",
+    "markdown-it-inline-annotation": "^0.8.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

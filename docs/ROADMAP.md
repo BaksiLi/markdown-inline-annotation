@@ -10,13 +10,14 @@ host adapters.
 | Project | Role | Workspace |
 | --- | --- | --- |
 | `markdown-it-inline-annotation` | parser/model, HTML renderer, markdown-it adapter | `packages/markdown-it` |
-| `logseq-furigana-ruby` | independent parser, macros, conversions, Logseq renderer | `plugins/logseq` |
+| `marked-inline-annotation` | Marked inline tokenizer and renderer | `packages/marked` |
+| `logseq-furigana-ruby` | shared-core markup rendering, Logseq macros and conversions | `plugins/logseq` |
 | `obsidian-inline-annotation` | Reading view and Live Preview | `plugins/obsidian` |
 | `vscode-inline-annotation` | thin built-in Markdown preview adapter | `plugins/vscode` |
 | `satteri-inline-annotation` | two-phase Sätteri Markdown adapter; unpublished pilot | `packages/satteri` |
 | remark/unified | AST adapter | deferred until a real pipeline needs it |
 
-All workspaces now share one product release version. Syntax remains v2.
+All workspaces now share one product release version.
 The historical milestones below retain their original package version numbers.
 
 ## Open Logseq follow-ups
@@ -24,15 +25,10 @@ The historical milestones below retain their original package version numbers.
 - Replace the SDK's embedded vulnerable dependencies through a supported
   upstream release or a separately reviewed, reproducible rebuild. Lockfile
   overrides alone do not alter its prebundled JavaScript.
-- Preserve escapes across the independent renderer's repeated passes.
-  `[a\^^(b)]^_(.-)` can reinterpret an escaped operator, and
-  `[\[y\]^^(b)]^_(.-)` can produce malformed HTML. The new live DOM builder
-  leaves malformed output as original text; the string conversion API still
-  needs a separate correction and conformance coverage.
 
 ## Contracts
 
-The stable [v2 spec](../SPEC.md) owns:
+The stable [specification](../SPEC.md) owns:
 
 - bracketed and abbreviated source syntax;
 - over/under slot assignment, pipe and chain behavior;
@@ -117,7 +113,7 @@ the existing `markdown-it-inline-annotation/core` export is already the right
 runtime boundary.
 
 Sätteri parses Markdown before its MDAST plugins run, and its emphasis parser
-can split the v2 `^_` chain operator. The adapter therefore has two phases:
+can split the `^_` chain operator. The adapter therefore has two phases:
 
 1. an MDAST phase reads the original source range, applies the core parser, and
    reparses the surrounding Markdown with inert markers in place of complete
@@ -144,7 +140,7 @@ package while preserving `markdown-it-inline-annotation/core` as a compatibility
 re-export.
 
 The public model names and UTF-16, zero-based, end-exclusive range invariants
-are now fixed in v2 and covered by model fixtures. Before extraction:
+are now specified and covered by model fixtures. Before extraction:
 
 - decide whether fixtures live with the neutral core or in a small conformance
   package.
@@ -189,7 +185,7 @@ workspace, lockfile, shared conformance corpus, and release line. The existing
 extracting or renaming that package is independent of repository consolidation.
 
 ```text
-SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/satteri/
+SPEC.md  fixtures/  docs/  packages/markdown-it/  packages/marked/  packages/satteri/
 plugins/obsidian/  plugins/logseq/  plugins/vscode/  scripts/
 ```
 

@@ -52,3 +52,11 @@ test("rejects filenames outside the release bundle", (t) => {
   writeFileSync(resolve(directory, "SHA256SUMS"), `${sums.join("\n")}\n${"0".repeat(64)}  ../main.js\n`);
   assert.throws(() => verifyReleaseChecksums(directory, "0.8.2"), /Unexpected filename/);
 });
+
+
+test("retains the original bundle on retry and includes Marked in subsequent releases", () => {
+  assert.ok(!releaseAssetNames("0.8.4").includes("marked-inline-annotation-0.8.4.tgz"));
+  for (const version of ["0.8.5", "0.8.10", "0.9.0", "1.0.0"]) {
+    assert.ok(releaseAssetNames(version).includes(`marked-inline-annotation-${version}.tgz`));
+  }
+});

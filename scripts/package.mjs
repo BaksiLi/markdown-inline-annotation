@@ -11,9 +11,10 @@ rmSync(artifacts, { recursive: true, force: true });
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(artifacts);
 mkdirSync(stage);
-run(npm, ["pack", "--workspace", "packages/markdown-it", "--pack-destination", artifacts]);
-const core = readdirSync(artifacts).find((name) => name.endsWith(".tgz"));
-if (!core) throw new Error("Missing core tarball");
+for (const workspace of ["packages/markdown-it", "packages/marked"]) {
+  run(npm, ["pack", "--workspace", workspace, "--pack-destination", artifacts]);
+}
+const core = `markdown-it-inline-annotation-${version}.tgz`;
 
 for (const name of ["main.js", "manifest.json", "styles.css"]) {
   cpSync(resolve(root, "plugins/obsidian", name), resolve(artifacts, name));

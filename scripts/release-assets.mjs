@@ -3,12 +3,18 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export function releaseAssetNames(version) {
+// The original 0.8.4 and earlier GitHub releases contain only the core tarball.
+export function hasPublishedMarkedAsset(version) {
+  return version.localeCompare("0.8.4", "en", { numeric: true }) > 0;
+}
+
+export function releaseAssetNames(version, withMarked = hasPublishedMarkedAsset(version)) {
   assert.match(version, /^\d+\.\d+\.\d+$/, "Expected a bare release version");
   return [
     "logseq-furigana-ruby.zip",
     "main.js",
     "manifest.json",
+    ...(withMarked ? [`marked-inline-annotation-${version}.tgz`] : []),
     `markdown-it-inline-annotation-${version}.tgz`,
     "SHA256SUMS",
     "styles.css",
@@ -16,8 +22,8 @@ export function releaseAssetNames(version) {
   ].sort();
 }
 
-export function verifyReleaseChecksums(directory, version) {
-  const names = releaseAssetNames(version);
+export function verifyReleaseChecksums(directory, version, withMarked) {
+  const names = releaseAssetNames(version, withMarked);
   assert.deepEqual(readdirSync(directory).sort(), names, "Release asset set differs");
   const expected = names.filter((name) => name !== "SHA256SUMS");
   const checksums = new Map();

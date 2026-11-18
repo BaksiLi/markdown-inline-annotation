@@ -1,8 +1,14 @@
 # Adapter Guide
 
-Inline Annotation v2 is stable. A host port should reuse its syntax and model;
+Inline Annotation is stable. A host port should reuse its syntax and model;
 the adapter's job is to decide where parsing is allowed and how the resulting
 model becomes host output without destroying host-owned structure.
+
+Projects documenting support can link to the specification directly:
+
+> This editor supports [Inline Annotation](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md) for ruby and interlinear glosses.
+
+List the views or export formats where the syntax works, and any host-specific limits.
 
 ## Ownership
 
@@ -15,7 +21,7 @@ model becomes host output without destroying host-owned structure.
 | Editor transactions, decorations, lifecycle | Host plugin |
 | Space alignment and equivalent layout choices | Renderer policy |
 
-Annotation slots are plain text in v2. An adapter may support richer base
+Annotation slots are plain text. An adapter may support richer base
 rendering only when it preserves the same model, ranges, and source ownership.
 Rich slot content needs a later specification version rather than a local
 interpretation presented as portable behavior.
@@ -29,7 +35,9 @@ Choose the profile that matches the host's real parsing boundary.
 Use this when the host exposes the original inline source before conflicting
 Markdown rules consume it. The markdown-it plugin is the reference profile.
 Run the Inline Annotation rule at a deliberate precedence, stop at host-owned
-constructs, and let the host parse surrounding Markdown normally.
+constructs, and let the host parse surrounding Markdown normally. The
+[Marked adapter](../packages/marked/) uses this profile and masks slot delimiters
+while Marked pairs the surrounding emphasis markers.
 
 ### Source-backed AST rewrite
 
@@ -49,8 +57,7 @@ text and then replace it without restoring node ownership.
 
 ### Independent parser
 
-Use this only when the host language or runtime cannot consume the shared core,
-as in Logseq. Run the portable model and rendering corpora, document host parser
+Use this only when the host language or runtime cannot consume the shared core. Run the portable model and rendering corpora, document host parser
 conflicts, and keep any vendored fixtures traceable to their core release.
 
 ### Thin delegation
@@ -93,5 +100,5 @@ present in offset tests; ASCII-only tests cannot expose the difference.
    does not prove packaging, plugin loading, or production pipeline order.
 
 The syntax core should not gain host flags to make a port convenient. If an
-integration cannot preserve v2 semantics, keep the source unchanged and record
+integration cannot preserve these semantics, keep the source unchanged and record
 the host limitation until its boundary is understood.

@@ -143,12 +143,16 @@ describe("DOM rendering treats hostile text as text", () => {
     expect(Array.from(host.querySelectorAll("rt"), (node) => node.textContent)).toEqual(["inner", "outer"]);
   });
 
-  it("leaves the source unchanged if repeated rendering produces malformed output", () => {
-    const source = "[\\[y\\]^^(b)]^_(.-)";
-    const host = renderTextNode(source);
-    expect(host.childNodes).toHaveLength(1);
-    expect(host.textContent).toBe(source);
-    expect(host.querySelector("ruby, span")).toBeNull();
+  it("keeps escaped operators and brackets literal in a decorated base", () => {
+    for (const [source, literal] of [
+      [String.raw`[a\^^(b)]^_(.-)`, "a^^(b)"],
+      [String.raw`[\[y\]^^(b)]^_(.-)`, "[y]^^(b)"],
+    ]) {
+      const host = renderTextNode(source);
+      expect(host.querySelector(".ia-underline")?.textContent).toBe(literal);
+      expect(host.querySelector("ruby")).toBeNull();
+      expectSameDom(host, parsedReference(rubyToHTML(source)));
+    }
   });
 
   it("keeps < and & as abbreviated-base boundaries", () => {
@@ -169,7 +173,7 @@ describe("private-use characters in source text", () => {
   it("are not boundaries in the public string API", () => {
     for (const ch of pua) {
       expect(rubyToHTML(`${ch}漢^^(かん)`)).toBe(
-        `<ruby class="ia-ruby ia-ruby-over">${ch}漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby>`
+        `<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">${ch}漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby>`
       );
     }
   });
@@ -184,27 +188,20 @@ describe("private-use characters in source text", () => {
     }
   });
 
-  it("leaves text unchanged when fewer than two BMP private-use characters remain", () => {
+  it("renders even when the source uses the entire private-use area", () => {
     let all = "";
     for (let code = 0xe000; code <= 0xf8ff; code++) all += String.fromCharCode(code);
-    const source = `${all} 漢^^(かん)`;
-    const host = renderTextNode(source);
-    expect(host.querySelector("ruby")).toBeNull();
-    expect(host.childNodes).toHaveLength(1);
-    expect(host.textContent).toBe(source);
-
-    const oneFree = renderTextNode(`${all.slice(1)} 漢^^(かん)`);
-    expect(oneFree.querySelector("ruby")).toBeNull();
+    const host = renderTextNode(`${all} 漢^^(かん)`);
+    expect(host.firstChild?.textContent).toBe(`${all} `);
+    expect(host.querySelector("rt")?.textContent).toBe("かん");
   });
 });
 
 describe("generated-grammar DOM builder", () => {
-  const sentinels = { lt: "\uE001", amp: "\uE002" };
-  const build = (html: string) => buildGeneratedFragment(html, document, sentinels);
+  const build = (html: string) => buildGeneratedFragment(html, document);
 
-  it("decodes renderer escapes once and restores sentinels", () => {
-    const fragment = build("\uE001b&gt; \uE002amp; &amp;lt; &quot;");
-    expect(fragment.textContent).toBe('<b> &amp; &lt; "');
+  it("decodes renderer escapes once", () => {
+    expect(build("&lt;b&gt; &amp;amp; &amp;lt; &quot;").textContent).toBe('<b> &amp; &lt; "');
   });
 
   it("rejects output outside the generated grammar", () => {

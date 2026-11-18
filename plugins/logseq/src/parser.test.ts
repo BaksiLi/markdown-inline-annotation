@@ -88,12 +88,12 @@ describe("shared spec fixtures — HTML rendering", () => {
 describe("rubyToHTML — basic", () => {
   it("[漢字]^^(かんじ)", () => {
     expect(rubyToHTML("[漢字]^^(かんじ)")).toBe(
-      '<ruby class="ia-ruby ia-ruby-over">漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>'
+      '<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>'
     );
   });
   it("abbreviated form", () => {
     expect(rubyToHTML("東京^^(とうきょう)")).toBe(
-      '<ruby class="ia-ruby ia-ruby-over">東京<rp>(</rp><rt>とうきょう</rt><rp>)</rp></ruby>'
+      '<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">東京<rp>(</rp><rt>とうきょう</rt><rp>)</rp></ruby>'
     );
   });
   it("preserves surrounding text", () => {
@@ -277,17 +277,17 @@ describe("rubyToHTML — bouten", () => {
   });
   it("^_(..) under", () => {
     expect(rubyToHTML("[漢字]^_(..)")).toBe(
-      '<span class="ia-bouten ia-bouten-under" style="text-decoration:underline dotted;text-underline-offset:0.15em">漢字</span>'
+      '<span class="ia-bouten ia-bouten-under" style="text-decoration-line:underline;text-underline-offset:0.15em;text-decoration-style:dotted">漢字</span>'
     );
   });
   it("^^(..)^_(..) both → single span with over+under classes", () => {
     expect(rubyToHTML("[漢字]^^(..)^_(..)")).toBe(
-      '<span class="ia-bouten ia-bouten-over ia-bouten-under" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration:underline dotted;text-underline-offset:0.15em">漢字</span>'
+      '<span class="ia-bouten ia-bouten-over ia-bouten-under" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration-line:underline;text-underline-offset:0.15em;text-decoration-style:dotted">漢字</span>'
     );
   });
   it("^_(..)^^(..) reverse → same result", () => {
     expect(rubyToHTML("[漢字]^_(..)^^(..)")).toBe(
-      '<span class="ia-bouten ia-bouten-over ia-bouten-under" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration:underline dotted;text-underline-offset:0.15em">漢字</span>'
+      '<span class="ia-bouten ia-bouten-over ia-bouten-under" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration-line:underline;text-underline-offset:0.15em;text-decoration-style:dotted">漢字</span>'
     );
   });
   it("single dot NOT bouten", () => {
@@ -400,7 +400,7 @@ describe("annotation parentheses", () => {
 
   it("renders the full reported sentence without truncating the gloss", () => {
     expect(rubyToHTML(sentence)).toBe(
-      '[[Cogitatum]] 可以完成從內容進入 <ruby class="ia-ruby ia-ruby-over">（半）形式的產物<rp>(</rp><rt>(semi-)formal artefact</rt><rp>)</rp></ruby> 轉譯。Point 可以來源於一段談話，但不必等於原話。'
+      '[[Cogitatum]] 可以完成從內容進入 <ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">（半）形式的產物<rp>(</rp><rt>(semi-)formal artefact</rt><rp>)</rp></ruby> 轉譯。Point 可以來源於一段談話，但不必等於原話。'
     );
   });
 
@@ -548,7 +548,7 @@ describe("rubyToHTML — abbreviated form boundary", () => {
   it("does not include [ in abbreviated base", () => {
     // With bracket-stop fix, abbreviated form stops at [,
     // so 初音ミク is the base (not [初音ミク).
-    // Multi-pass then processes the outer [...]^_(Vocaloid) bracket.
+    // The outer under-slot wraps the annotated title.
     const r = rubyToHTML("[初音ミク^^(偉大なる|世界一姫様)]^_(Vocaloid)");
     // 偉大なる should be over (operator was ^^)
     expect(r).toContain("ia-ruby-over");
@@ -705,6 +705,12 @@ describe("anyToHTML", () => {
   it("markup → HTML", () => {
     expect(anyToHTML("[漢字]^^(かんじ)")).toContain("<ruby");
   });
+  it("keeps syntax-looking macro arguments literal next to markup", () => {
+    const html = anyToHTML("{{renderer :ruby, a, x^^(b)}} [c]^^(d)");
+    expect(html).toContain("<rt>x^^(b)</rt>");
+    expect(html).toContain("<rt>d</rt>");
+    expect(anyToMacro(String.raw`x\^^(b) [c]^^(d)`)).toBe(String.raw`x\^^(b) {{renderer :ruby, c, d}}`);
+  });
   it("macro → HTML", () => {
     expect(anyToHTML("{{renderer :ruby, 漢字, かんじ}}")).toContain("<ruby");
   });
@@ -819,7 +825,7 @@ describe("Logseq host workflows", () => {
 
   it("rubyToHTML does not reconsume generated HTML in same-op chains", () => {
     const result = rubyToHTML("[base]^^(a)^^(b)");
-    expect(result).toContain('<ruby class="ia-ruby ia-ruby-over">base');
+    expect(result).toContain('<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">base');
     expect(result).toContain("<rt>a</rt>");
     expect(result).toContain("^^(b)");
     expect(result).not.toContain('class="ia-ruby <ruby class=');
@@ -843,7 +849,7 @@ describe("inline styles", () => {
   it("bouten under has inline text-decoration", () => {
     const r = rubyToHTML("[漢字]^_(..)");
     expect(r).toContain('style="');
-    expect(r).toContain("text-decoration:underline dotted");
+    expect(r).toContain("text-decoration-style:dotted");
   });
   it("underline has inline style", () => {
     const r = rubyToHTML("[base]^_(.-)");
@@ -854,9 +860,9 @@ describe("inline styles", () => {
     const r = rubyToHTML("[base]^_(ann)");
     expect(r).toContain('style="ruby-position:under"');
   });
-  it("ruby over has no inline ruby-position", () => {
+  it("ruby over explicitly positions nested annotations", () => {
     const r = rubyToHTML("[base]^^(ann)");
-    expect(r).not.toContain('style=');
+    expect(r).toContain('style="ruby-position:over"');
   });
   it("nested ruby under has inline style", () => {
     const r = rubyToHTML("[北京]^^(Beijing|PKG)");
@@ -876,7 +882,7 @@ describe("auto-hide wrapping", () => {
   it("hidden chars wrapped in empty-rt ruby (Issue 5)", () => {
     const r = rubyToHTML("[振り仮名]^^(ふ り が な)");
     // り should be wrapped in ruby with empty rt, not bare text
-    expect(r).toContain('<ruby class="ia-ruby ia-ruby-over">り<rp>(</rp><rt></rt><rp>)</rp></ruby>');
+    expect(r).toContain('<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">り<rp>(</rp><rt></rt><rp>)</rp></ruby>');
     expect(r).toContain("<rt>ふ</rt>");
     expect(r).toContain("<rt>が</rt>");
     expect(r).toContain("<rt>な</rt>");
