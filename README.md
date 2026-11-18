@@ -21,12 +21,8 @@ guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 It implements the syntax proposed by Baksi Li in
 [Ruby (Furigana) Syntax in Markdown](https://blog.baksili.codes/markdown-ruby).
 The original Logseq implementation grew into a shared syntax, reference parser,
-and integrations for markdown-it, Marked, Obsidian, VS Code, and Logseq.
-
-<img src="./plugins/logseq/assets/logseq_showcase.png" alt="Inline Annotation in Logseq: Markdown source beside rendered furigana, phonetic glosses above and below, bouten, underlines, per-character readings, and nested ruby." width="560">
-
-*The original Logseq showcase. See the [Logseq guide](plugins/logseq/) for
-host-specific behavior and copyable examples.*
+and integrations for markdown-it, Marked, Obsidian, VS Code, Logseq, and
+SilverBullet.
 
 <img src="./plugins/obsidian/assets/obsidian-reading-glosses.jpg" alt="Inline Annotation (Ruby) in Obsidian: original terms and translations above and below Chinese prose, with per-character phonetic readings and grouped glosses." width="560">
 
@@ -46,7 +42,7 @@ implementations aligned. This is a proposal with working implementations.
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
 | `marked-inline-annotation` | [npm](https://www.npmjs.com/package/marked-inline-annotation) · [guide](packages/marked/) | Inline tokenizer for Marked 18 |
-| Inline Annotation for SilverBullet | [Preview release](https://github.com/BaksiLi/markdown-inline-annotation/releases/tag/silverbullet-preview-1) · [guide](plugins/silverbullet/) | SilverBullet Library Manager, editor preview and HTML rendering |
+| Inline Annotation for SilverBullet | [Preview release](https://github.com/BaksiLi/markdown-inline-annotation/releases/tag/silverbullet-preview-2) · [guide](plugins/silverbullet/) | SilverBullet Library Manager, editor preview and HTML rendering |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
 
 ## Install

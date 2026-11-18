@@ -45,6 +45,21 @@ GitHub Release contains only the core npm tarball. See [publisher setup](MIGRATI
   button. Its scan may lag behind the GitHub release.
 - Check the Logseq directory handover before archiving its original repository.
 
+## SilverBullet previews
+
+Build the Library Manager files and manual-install ZIP after any
+`release:pack` run, which recreates `artifacts/`.
+
+```sh
+node plugins/silverbullet/pack-preview.mjs
+```
+
+Publish the files in `artifacts/silverbullet/` as a GitHub prerelease with a
+new `silverbullet-preview-N` tag. The installation URI points to that tag's
+`silverbullet-library.md` asset. Keep the companion files listed in the
+library's frontmatter on the same release. Verify the public URI with
+`Library: Install` in a fresh space and open the installed demo.
+
 ## Download counts
 
 ```sh
