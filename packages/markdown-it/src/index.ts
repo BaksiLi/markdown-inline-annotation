@@ -38,6 +38,7 @@ export function inlineAnnotationPlugin(md: MarkdownIt, options?: MarkdownItInlin
 export default inlineAnnotationPlugin;
 export { inlineAnnotationPlugin as plugin };
 export {
+  classifyInlineAnnotationSlot,
   findInlineAnnotation,
   findInlineAnnotationBeforeMarkdown,
   findInlineAnnotationModel,
@@ -51,9 +52,11 @@ export {
   type InlineAnnotationOptions,
   type InlineAnnotationMatch,
   type InlineAnnotationForm,
+  type InlineAnnotationDecoration,
   type InlineAnnotationModel,
   type InlineAnnotationRange,
   type InlineAnnotationSlot,
+  type InlineAnnotationSlotContent,
   type InlineAnnotationSlotSource,
   type AnnotationOp,
   type AnnotationPosition,

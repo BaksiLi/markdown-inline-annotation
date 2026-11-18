@@ -714,6 +714,9 @@ describe("anyToHTML", () => {
   it("macro → HTML", () => {
     expect(anyToHTML("{{renderer :ruby, 漢字, かんじ}}")).toContain("<ruby");
   });
+  it("renders ordinary macro glosses that coincide with object properties", () => {
+    expect(anyToHTML("{{renderer :ruby, term, constructor}}")).toContain("<rt>constructor</rt>");
+  });
 });
 
 // ---------------------------------------------------------------------------

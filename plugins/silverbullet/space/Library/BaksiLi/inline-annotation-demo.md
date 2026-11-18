@@ -21,3 +21,5 @@ Frege 把「函數」描述為某種 [不飽和實體]^^(unsaturated entity)：�
 ## Emphasis and glosses
 
 [重要語句]^^(じゅうようごく|.-) · [強調]^^(..)^_(.~) · [artefact]^^((semi-)formal artefact)
+
+[term]^_(outer (inner (detail))) · [term]^^(constructor)

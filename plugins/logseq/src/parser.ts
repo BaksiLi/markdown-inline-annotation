@@ -1,4 +1,9 @@
-import { findInlineAnnotationModels, renderInlineAnnotationModelToHtml } from "markdown-it-inline-annotation/core";
+import {
+  classifyInlineAnnotationSlot,
+  findInlineAnnotationModels,
+  renderInlineAnnotationModelToHtml,
+  type UnderlineStyle,
+} from "markdown-it-inline-annotation/core";
 
 /**
  * Ruby (Furigana) parser implementing the proposal syntax.
@@ -28,18 +33,6 @@ const BOUTEN_PATTERN = "..";
 const ABBREVIATED_BOUNDARY_CHARS = "[]()<>`*&!";
 const GENERATED_ANNOTATION_HTML_RE =
   /<(?:ruby|span)\b[^>]*\bclass=(?:"[^"]*\bia-(?:ruby|bouten|underline|overline)\b[^"]*"|'[^']*\bia-(?:ruby|bouten|underline|overline)\b[^']*')/i;
-
-type UnderlineStyle = "solid" | "wavy" | "double";
-
-const UNDERLINE_STYLES: Record<string, UnderlineStyle> = {
-  ".-": "solid",
-  ".~": "wavy",
-  ".=": "double",
-};
-
-function getUnderlineStyle(pattern: string): UnderlineStyle | null {
-  return UNDERLINE_STYLES[pattern] ?? null;
-}
 
 function lineKeyword(op: RubyOp): "overline" | "underline" {
   return op === "^^" ? "overline" : "underline";
@@ -971,11 +964,12 @@ export function renderMacroRuby(args: string[]): string | null {
   if (!base || !rawAnn) return null;
 
   const posArg = (args[3] ?? "").trim().toLowerCase();
-  const op: RubyOp = posArg === "under" ? "^_" : "^^";
+  const position = posArg === "under" ? "under" : "over";
+  const op: RubyOp = position === "under" ? "^_" : "^^";
 
-  if (rawAnn === BOUTEN_PATTERN) return renderBouten(base, op);
-  const macroLineStyle = getUnderlineStyle(rawAnn);
-  if (macroLineStyle !== null) return renderLine(base, op, macroLineStyle);
+  const slot = classifyInlineAnnotationSlot(rawAnn, position);
+  if (slot.kind === "bouten") return renderBouten(base, op);
+  if (slot.kind === "line") return renderLine(base, op, slot.style);
 
   const levels = splitByUnescapedPipe(rawAnn).map(unescape);
   return renderRuby(base, op, levels);

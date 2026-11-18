@@ -28,6 +28,12 @@ export interface InlineAnnotationSlot extends InlineAnnotationRange {
   source: InlineAnnotationSlotSource;
 }
 
+export type InlineAnnotationDecoration =
+  | { kind: "bouten"; position: AnnotationPosition }
+  | { kind: "line"; position: AnnotationPosition; style: UnderlineStyle };
+
+export type InlineAnnotationSlotContent = InlineAnnotationDecoration | { kind: "ruby"; raw: string };
+
 export interface InlineAnnotationModel {
   form: InlineAnnotationForm;
   /** Zero-based, end-exclusive UTF-16 offsets into the original source. */
@@ -51,7 +57,8 @@ export interface InlineAnnotationMatch {
   model: InlineAnnotationModel;
 }
 
-interface SlotResolution {
+interface ParsedSlots {
+  end: number;
   slots: InlineAnnotationSlot[];
   overflow: InlineAnnotationRange[];
 }
@@ -73,11 +80,11 @@ const DEFAULT_OPTIONS: ResolvedOptions = {
 };
 
 const BOUTEN_PATTERN = "..";
-const UNDERLINE_STYLES: Record<string, UnderlineStyle> = {
-  ".-": "solid",
-  ".~": "wavy",
-  ".=": "double",
-};
+const UNDERLINE_STYLES = new Map<string, UnderlineStyle>([
+  [".-", "solid"],
+  [".~", "wavy"],
+  [".=", "double"],
+]);
 
 const STYLE_BOUTEN_OVER =
   "text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right";
@@ -121,32 +128,15 @@ function escapedText(input: string): string {
   return escapeHtml(unescapeMarkup(input));
 }
 
-function splitByUnescapedPipe(input: string): string[] {
-  const parts: string[] = [];
-  let buf = "";
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] === "|" && !isEscaped(input, i)) {
-      parts.push(buf);
-      buf = "";
-    } else {
-      buf += input[i];
-    }
-  }
-  parts.push(buf);
-  return parts;
+function range(input: string, start: number, end: number): InlineAnnotationRange {
+  return { start, end, raw: input.slice(start, end) };
 }
 
-function splitByUnescapedPipeWithRanges(input: string, offset: number): InlineAnnotationRange[] {
-  const parts: InlineAnnotationRange[] = [];
-  let partStart = 0;
-  for (let i = 0; i < input.length; i++) {
-    if (input[i] === "|" && !isEscaped(input, i)) {
-      parts.push({ start: offset + partStart, end: offset + i, raw: input.slice(partStart, i) });
-      partStart = i + 1;
-    }
+function findUnescapedPipe(input: string, start: number, end: number): number {
+  for (let i = start; i < end; i++) {
+    if (input[i] === "|" && !isEscaped(input, i)) return i;
   }
-  parts.push({ start: offset + partStart, end: offset + input.length, raw: input.slice(partStart) });
-  return parts;
+  return end;
 }
 
 function findCloseParen(input: string, start: number, max: number): number {
@@ -235,7 +225,7 @@ function decorationRank(position: AnnotationPosition): number {
   return position === "over" ? 0 : 1;
 }
 
-function renderIndependentTextDecorations(baseHtml: string, decos: DecorationSlot[], options: ResolvedOptions): string {
+function renderIndependentTextDecorations(baseHtml: string, decos: InlineAnnotationDecoration[], options: ResolvedOptions): string {
   const ordered = [...decos].sort((a, b) => decorationRank(a.position) - decorationRank(b.position));
   let html = baseHtml;
   for (let i = ordered.length - 1; i >= 0; i--) {
@@ -297,22 +287,15 @@ function renderRubyElement(
   return `<ruby class="${classes}"${attrStyle(styles, options)}>${baseHtml}<rp>${open}</rp><rt>${annotationHtml}</rt><rp>${close}</rp></ruby>`;
 }
 
-type DecorationSlot =
-  | { kind: "bouten"; position: AnnotationPosition }
-  | { kind: "line"; position: AnnotationPosition; style: UnderlineStyle };
-
-type ClassifiedSlot = DecorationSlot | { kind: "ruby"; raw: string };
-
-// A slot is a decoration mark only when its *raw* content matches a glyph
-// exactly. Escaping the leading dot (e.g. `\.-`) keeps it as literal ruby text.
-function classifySlot(raw: string, position: AnnotationPosition): ClassifiedSlot {
+/** Classify exact raw slot text. An escaped mark remains ordinary ruby text. */
+export function classifyInlineAnnotationSlot(raw: string, position: AnnotationPosition): InlineAnnotationSlotContent {
   if (raw === BOUTEN_PATTERN) return { kind: "bouten", position };
-  const style = UNDERLINE_STYLES[raw];
+  const style = UNDERLINE_STYLES.get(raw);
   if (style) return { kind: "line", position, style };
   return { kind: "ruby", raw };
 }
 
-function renderDecorations(baseHtml: string, decos: DecorationSlot[], options: ResolvedOptions): string {
+function renderDecorations(baseHtml: string, decos: InlineAnnotationDecoration[], options: ResolvedOptions): string {
   const textDecorationDecos = decos.filter((deco) => deco.kind === "line" || deco.position === "under");
   const boutenOver = decos.find((deco) => deco.kind === "bouten" && deco.position === "over");
 
@@ -372,7 +355,7 @@ function renderRubyWithDecoration(
   baseHtml: string,
   rubyHtml: string,
   rubyPosition: AnnotationPosition,
-  deco: DecorationSlot,
+  deco: InlineAnnotationDecoration,
   options: ResolvedOptions
 ): string {
   const decoClass =
@@ -481,10 +464,10 @@ export function renderInlineAnnotationModelToHtml(model: InlineAnnotationModel, 
   const baseHtml = nested ? renderInlineAnnotationsToHtml(baseRaw, options) : escapedText(baseRaw);
   const plainBase = nested ? "" : unescapeMarkup(baseRaw);
   const overflowHtml = model.overflow.map((range) => escapedText(range.raw)).join("");
-  const classified = model.slots.map((slot) => ({ slot, value: classifySlot(slot.raw, slot.position) }));
+  const classified = model.slots.map((slot) => ({ slot, value: classifyInlineAnnotationSlot(slot.raw, slot.position) }));
   const decorations = classified
     .map(({ value }) => value)
-    .filter((slot): slot is DecorationSlot => slot.kind !== "ruby");
+    .filter((slot): slot is InlineAnnotationDecoration => slot.kind !== "ruby");
   const rubies = classified.filter((entry): entry is { slot: InlineAnnotationSlot; value: { kind: "ruby"; raw: string } } => {
     return entry.value.kind === "ruby";
   });
@@ -509,69 +492,63 @@ export function renderInlineAnnotationModelToHtml(model: InlineAnnotationModel, 
   return renderRubyLevels(baseHtml, plainBase, model.primaryOp, rubies.map((ruby) => ruby.value.raw), options) + overflowHtml;
 }
 
-function resolveSlots(op: AnnotationOp, ann: string, annStart: number, op2: AnnotationOp | null, ann2: InlineAnnotationRange | null): SlotResolution {
-  const levels = splitByUnescapedPipeWithRanges(ann, annStart);
+function parseSlots(input: string, opStart: number, op: AnnotationOp, max: number): ParsedSlots | null {
+  const annStart = opStart + 3;
+  const annEnd = findCloseParen(input, annStart, max);
+  if (annEnd <= annStart) return null;
+
+  const firstPipe = findUnescapedPipe(input, annStart, annEnd);
   const slots: InlineAnnotationSlot[] = [
-    { ...levels[0], position: positionForOp(op), source: "primary" },
+    { ...range(input, annStart, firstPipe), position: positionForOp(op), source: "primary" },
   ];
   const overflow: InlineAnnotationRange[] = [];
-  if (levels.length >= 2) {
-    slots.push({ ...levels[1], position: positionForOp(opposite(op)), source: "pipe" });
-    if (levels.length > 2) {
-      const overflowStart = levels[2].start - 1;
-      const overflowEnd = levels[levels.length - 1].end;
-      overflow.push({
-        start: overflowStart,
-        end: overflowEnd,
-        raw: ann.slice(overflowStart - annStart, overflowEnd - annStart),
-      });
+  const secondOp = opposite(op);
+  const secondPosition = positionForOp(secondOp);
+  let end = annEnd + 1;
+
+  // A pipe has already filled both slots. Leave any following operator for
+  // the host, and keep the remaining pipe content as one literal range.
+  if (firstPipe < annEnd) {
+    const secondPipe = findUnescapedPipe(input, firstPipe + 1, annEnd);
+    slots.push({ ...range(input, firstPipe + 1, secondPipe), position: secondPosition, source: "pipe" });
+    if (secondPipe < annEnd) overflow.push(range(input, secondPipe, annEnd));
+  } else if (opAt(input, end, max) === secondOp) {
+    const secondStart = end + 3;
+    const secondEnd = findCloseParen(input, secondStart, max);
+    if (secondEnd > secondStart) {
+      slots.push({ ...range(input, secondStart, secondEnd), position: secondPosition, source: "chain" });
+      end = secondEnd + 1;
     }
-  } else if (op2 !== null && ann2 !== null) {
-    slots.push({ ...ann2, position: positionForOp(op2), source: "chain" });
   }
-  return { slots, overflow };
+  return { end, slots, overflow };
+}
+
+function parseWithBase(
+  input: string, start: number, opStart: number, op: AnnotationOp, max: number, form: InlineAnnotationForm
+): InlineAnnotationModel | null {
+  const parsed = parseSlots(input, opStart, op, max);
+  if (!parsed) return null;
+  const bracketed = form === "bracketed";
+  const { end, slots, overflow } = parsed;
+  return {
+    form,
+    start,
+    end,
+    source: input.slice(start, end),
+    base: range(input, bracketed ? start + 1 : start, bracketed ? opStart - 1 : opStart),
+    primaryOp: op,
+    slots,
+    overflow,
+  };
 }
 
 function parseBracketedAt(input: string, start: number, max: number): InlineAnnotationModel | null {
   if (input[start] !== "[" || isEscaped(input, start)) return null;
   const close = findBracketClose(input, start, max);
   if (close < 0) return null;
-  const op = opAt(input, close + 1, max);
-  if (!op) return null;
-  const annStart = close + 4;
-  const annEnd = findCloseParen(input, annStart, max);
-  if (annEnd < 0 || annEnd === annStart) return null;
-
-  const ann = input.slice(annStart, annEnd);
-  let end = annEnd + 1;
-  let op2: AnnotationOp | null = null;
-  let ann2: InlineAnnotationRange | null = null;
-  const nextOp = opAt(input, end, max);
-  // Only consume a chained operator when the first annotation is single-level.
-  // A pipe-saturated annotation already fills both slots, so a following
-  // operator is over-capacity and is left in the stream to render as text.
-  if (nextOp && nextOp !== op && splitByUnescapedPipe(ann).length === 1) {
-    const secondStart = end + 3;
-    const secondEnd = findCloseParen(input, secondStart, max);
-    if (secondEnd >= 0 && secondEnd > secondStart) {
-      op2 = nextOp;
-      ann2 = { start: secondStart, end: secondEnd, raw: input.slice(secondStart, secondEnd) };
-      end = secondEnd + 1;
-    }
-  }
-
-  const source = input.slice(start, end);
-  const resolvedSlots = resolveSlots(op, ann, annStart, op2, ann2);
-  return {
-    form: "bracketed",
-    start,
-    end,
-    source,
-    base: { start: start + 1, end: close, raw: input.slice(start + 1, close) },
-    primaryOp: op,
-    slots: resolvedSlots.slots,
-    overflow: resolvedSlots.overflow,
-  };
+  const opStart = close + 1;
+  const op = opAt(input, opStart, max);
+  return op ? parseWithBase(input, start, opStart, op, max, "bracketed") : null;
 }
 
 function isAbbreviatedBoundary(ch: string | undefined): boolean {
@@ -583,43 +560,8 @@ function parseAbbreviatedAt(input: string, start: number, max: number, options: 
 
   for (let i = start + 1; i < max; i++) {
     const op = opAt(input, i, max);
-    if (op) {
-      const base = input.slice(start, i);
-      if (!base || /[\s[\]\n\r]/.test(base)) return null;
-      const annStart = i + 3;
-      const annEnd = findCloseParen(input, annStart, max);
-      if (annEnd < 0 || annEnd === annStart) return null;
-
-      const ann = input.slice(annStart, annEnd);
-      let end = annEnd + 1;
-      let op2: AnnotationOp | null = null;
-      let ann2: InlineAnnotationRange | null = null;
-      const nextOp = opAt(input, end, max);
-      if (nextOp && nextOp !== op && splitByUnescapedPipe(ann).length === 1) {
-        const secondStart = end + 3;
-        const secondEnd = findCloseParen(input, secondStart, max);
-        if (secondEnd >= 0 && secondEnd > secondStart) {
-          op2 = nextOp;
-          ann2 = { start: secondStart, end: secondEnd, raw: input.slice(secondStart, secondEnd) };
-          end = secondEnd + 1;
-        }
-      }
-
-      const source = input.slice(start, end);
-      const resolvedSlots = resolveSlots(op, ann, annStart, op2, ann2);
-      return {
-        form: "abbreviated",
-        start,
-        end,
-        source,
-        base: { start, end: i, raw: base },
-        primaryOp: op,
-        slots: resolvedSlots.slots,
-        overflow: resolvedSlots.overflow,
-      };
-    }
-
-    if (isAbbreviatedBoundary(input[i]) || input[i] === "^" || input[i] === "\n" || input[i] === "\r") return null;
+    if (op) return parseWithBase(input, start, i, op, max, "abbreviated");
+    if (isAbbreviatedBoundary(input[i]) || input[i] === "^") return null;
   }
 
   return null;

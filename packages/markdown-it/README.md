@@ -51,6 +51,10 @@ const html = renderInlineAnnotationsToHtml("[漢字]^^(かんじ)");
 install it; markdown-it integrations continue to provide their own compatible
 instance.
 
+DOM adapters can call `classifyInlineAnnotationSlot(raw, position)` from
+`/core` to distinguish ruby text from bouten and line marks using the same
+rules as the HTML renderer. Pass the original slot text with escapes intact.
+
 ## Syntax
 
 | Input | Meaning |

@@ -14,6 +14,8 @@ ghr:BaksiLi/markdown-inline-annotation@silverbullet-preview-1/silverbullet-libra
 
 Open `Library/BaksiLi/Inline Annotation` and follow the demo link. The Library
 Manager installs the demo and the shared renderer with the library page.
+Preview 1 accepts one level of parentheses inside a slot. The source build
+below extends that to three.
 
 For a manual install, extract the trial ZIP into a test space, keeping the
 `Library/` path. For a space that's already open, run `Space: Reindex` and reload
@@ -34,7 +36,8 @@ The [SilverBullet demo note](space/Library/BaksiLi/inline-annotation-demo.md) re
 examples from the project's [Before/After page][before-after] and
 [Obsidian showcase][obsidian-showcase]. The trial supports plain bracketed
 bases with `^^(...)` or `^_(...)`, pipe-separated slots, opposite-side chains,
-marks, backslash escapes, and one level of parentheses inside a slot. Kana and
+marks, backslash escapes, and up to three levels of parentheses inside a slot.
+The first slot can render while a following opposite slot is incomplete. Kana and
 phonetic readings can align per character. Ordinary multiword glosses stay
 grouped. The same output is available through
 `markdown.markdownToHtml(source, {expand = true})`.

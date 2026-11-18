@@ -9,7 +9,13 @@ const base = "(?:" + escaped + "|[^\\[\\]\\\\<>\\x60*_~&|\\r\\n])+\\]";
 
 function slotContent(excluded = "") {
   const unit = "(?:" + escaped + "|[^\\\\()\\r\\n" + excluded + "])";
-  return "(?:" + unit + "|\\(" + unit + "*\\))+";
+  // The host accepts delimiter regexes. Unroll three levels of the same
+  // balanced group, allowing empty inner pairs while requiring a nonempty slot.
+  let group = unit;
+  for (let depth = 0; depth < 3; depth++) {
+    group = "(?:" + unit + "|\\(" + group + "*\\))";
+  }
+  return group + "+";
 }
 
 const slot = slotContent();
@@ -17,12 +23,14 @@ const withoutPipe = slotContent("|");
 
 function regions(first, opposite) {
   const prefix = base + first;
+  const chain = opposite + slot;
   return [
-    // A single first slot can have a chained opposite slot.
-    { body: prefix + withoutPipe + closing + opposite + slot, after: "" },
+    // Prefer a complete opposite slot and keep the first slot visible while
+    // the second is empty or still being written.
+    { body: prefix + withoutPipe + closing + chain, after: "" },
     // A pipe in the first body already supplies the opposite slot.
     { body: prefix + "(?!" + withoutPipe + closing + ")" + slot, after: "" },
-    { body: prefix + withoutPipe, after: "(?!" + opposite + ")" },
+    { body: prefix + withoutPipe, after: "(?!" + chain + closing + ")" },
   ];
 }
 
