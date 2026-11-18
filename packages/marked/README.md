@@ -1,8 +1,13 @@
 # Inline Annotation for Marked
 
-Use ruby, interlinear glosses, and line marks in a Marked document. This
-workspace pilot uses the shared v2 parser and HTML renderer. To try it from
-the repository root, run `npm ci && npm run build`, then run this as ESM:
+Use ruby, interlinear glosses, and line marks in a Marked document.
+Install the extension alongside Marked.
+
+```sh
+npm install marked marked-inline-annotation
+```
+
+Register it once on your Marked instance.
 
 ```js
 import { Marked } from "marked";
@@ -21,5 +26,5 @@ and symbols such as emoji. Slot text is literal.
 
 Pass core rendering options such as `spaceAlignment` or `inlineStyles` to
 `inlineAnnotation()`. Applications using stylesheet rendering can import
-`markdown-it-inline-annotation/styles.css`. The pilot targets Marked 18.2.1
-and runs in the monorepo CI.
+`markdown-it-inline-annotation/styles.css`. The extension supports Marked ^18.2.1. See the
+[Inline Annotation specification](https://github.com/BaksiLi/markdown-inline-annotation/blob/main/SPEC.md).

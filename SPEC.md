@@ -2,18 +2,8 @@
 
 A syntax specification for ruby, furigana, bouten, and text decorations.
 
-> **Version: v2 · Status: Stable.** v2 is almost a superset of v1 — it makes
-> decoration marks symmetric, reclassifies space alignment as a rendering
-> enhancement, and stops silently dropping over-capacity input. Active
-> implementations include the markdown-it, Logseq, Obsidian, VS Code, and
-> Sätteri adapters. `markdown-it-inline-annotation` `0.1.x` and
-> `logseq-furigana-ruby` `0.5.x` implement v1, archived at
-> [`docs/SPEC-v1.md`](./docs/SPEC-v1.md).
-
-Inline Annotation is the shared syntax family behind the Logseq Furigana Ruby
-plugin, the markdown-it implementation, the Obsidian and VS Code adapters, and
-later remark/unified support. Every implementation emits the canonical `ia-*`
-HTML class contract, so one stylesheet family works across hosts.
+**Status: stable.** Implementations share the grammar and the `ia-*` HTML
+class contract, so the same stylesheet can render annotations across hosts.
 
 ## Status and Terminology
 
@@ -27,13 +17,8 @@ The words "must", "should", and "may" are used in their ordinary specification
 sense: "must" is required for conformance, "should" is recommended unless a host
 constraint makes it impractical, and "may" is optional.
 
-v2 keeps the two-slot model, source-range conventions, and `ia-*` class contract
-stable.
-The balanced-parenthesis revision remains part of v2 and changes annotation
-boundaries compared with earlier v2 implementations.
-Implementations must document this revision and its migration requirements;
-it is not fully source-compatible with the earlier delimiter rule.
-See **Annotation Parentheses** below.
+See **Annotation Parentheses** for current delimiter behavior. Implementations
+upgrading an older parser must document the migration described in Appendix C.
 
 ## Normative Specification
 
@@ -139,7 +124,7 @@ An `"auto"` policy should be conservative. For example,
 
 Bracketed bases may contain another Inline Annotation expression, for partially
 overlapping ruby. The base is parsed recursively; annotation slot contents are
-plain text in v2 (not parsed as Markdown).
+plain text (not parsed as Markdown).
 
 ```markdown
 [[護]^^(まも)れ]^_(プロテゴ)
@@ -179,18 +164,6 @@ Chaining and overflow follow the existing capacity rules after the annotation's
 closing delimiter has been found.
 An annotation with unbalanced parentheses is not matched; there is no fallback
 to the earlier first-unescaped-`)` rule.
-
-**Migration from earlier v2 implementations:**
-`[x]^^(a(b)c)` now annotates with `a(b)c`, rather than `a(b` followed by
-literal `c)`.
-To retain that earlier interpretation, write `[x]^^(a\(b)c)`.
-Earlier converters escaped only right parentheses, so
-`[x]^^((semi-\)formal artefact)` must become either
-`[x]^^((semi-)formal artefact)` or `[x]^^(\(semi-\)formal artefact)`.
-Converters emitting arbitrary annotation text must escape both `(` and `)`,
-as well as backslashes and literal pipes.
-Older implementations do not gain balanced-parenthesis support from the v2
-label alone; adapters must update their parser dependency or independent parser.
 
 ### Source Model and Ranges
 
@@ -353,7 +326,7 @@ claimed once):
 - `[a]^^(x)^^(y)` — not chained; two separate expressions
 
 **Capacity** — max 2 levels (over + under) per base. Over-capacity input renders
-through as text (changed from v1, which silently dropped it).
+through as text.
 
 ### Appendix B: Grammar Sketch (EBNF)
 
@@ -407,6 +380,9 @@ Recognition notes:
 
 ### Appendix C: Changes from v1
 
+The current grammar was published as v2. The original markdown-it 0.1.x and
+Logseq 0.5.x releases implemented v1.
+
 v1 is archived at [`docs/SPEC-v1.md`](./docs/SPEC-v1.md). Rationale, migration
 notes, and the core layering plan are in [`docs/v2-rationale.md`](./docs/v2-rationale.md).
 Summary:
@@ -417,3 +393,15 @@ Summary:
 2. **Alignment is a rendering enhancement**, not a structural/parse contract.
 3. **Over-capacity input renders through as text** instead of being silently
    dropped.
+
+**Migration from earlier v2 implementations:**
+`[x]^^(a(b)c)` now annotates with `a(b)c`, rather than `a(b` followed by
+literal `c)`.
+To retain that earlier interpretation, write `[x]^^(a\(b)c)`.
+Earlier converters escaped only right parentheses, so
+`[x]^^((semi-\)formal artefact)` must become either
+`[x]^^((semi-)formal artefact)` or `[x]^^(\(semi-\)formal artefact)`.
+Converters emitting arbitrary annotation text must escape both `(` and `)`,
+as well as backslashes and literal pipes.
+Older implementations do not gain balanced-parenthesis support from the v2
+label alone; adapters must update their parser dependency or independent parser.

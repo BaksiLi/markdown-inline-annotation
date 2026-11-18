@@ -57,7 +57,7 @@ export default {
 Put the MDAST phase before plugins that derive data from headings or paragraph
 text. It replaces complete expressions with inert markers and reparses the
 surrounding Markdown; the HAST phase replaces those markers with the core's
-escaped canonical HTML. This is necessary for v2 chains such as
+escaped canonical HTML. This is necessary for chains such as
 `[base]^^(over)^_(under)`, because an ordinary post-parse text visitor sees
 Sätteri's emphasis interpretation of `^_` too late.
 
@@ -71,7 +71,7 @@ consumer.
   list items and blockquotes.
 - Surrounding emphasis is retained: `**[漢字]^^(かんじ)**` stays strong.
 - Markdown-looking characters inside a base or slot remain plain text, as the
-  v2 spec requires.
+  specification requires.
 - Inline code, links, images, raw-HTML islands, and MDX are not claimed by the
   adapter.
 - GFM table cells are not transformed in `0.1.0`; their source ranges include

@@ -30,9 +30,10 @@ syntax revisions are specified separately.
 GitHub assets, npm, and VS Code Marketplace publish in separate jobs. npm uses
 a trusted publisher for `BaksiLi/markdown-inline-annotation`, workflow
 `release.yml`. Marketplace uses GitHub OIDC with a Trusted Publishing policy on
-the existing `baksili` publisher for the same repository and workflow. Both
-connections are configured; no Azure application or stored publishing token
-is needed. See [publisher setup](MIGRATION.md#publisher-setup).
+the existing `baksili` publisher for the same repository and workflow. Each npm package needs its own trust connection. For the first Marked release,
+publish the verified standalone tarball, then authorize `release.yml` for
+`marked-inline-annotation`. Subsequent tags publish the core first, then the
+Marked adapter. The original 0.8.4 GitHub asset set predates this adapter. See [publisher setup](MIGRATION.md#publisher-setup).
 
 ## Verify
 

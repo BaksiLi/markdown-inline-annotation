@@ -21,7 +21,7 @@ guides, interlinear glosses, bouten emphasis dots, overlines, and underlines:
 It implements the syntax proposed by Baksi Li in
 [Ruby (Furigana) Syntax in Markdown](https://blog.baksili.codes/markdown-ruby).
 The original Logseq implementation grew into a shared syntax, reference parser,
-and integrations for markdown-it, Obsidian, VS Code, and Logseq.
+and integrations for markdown-it, Marked, Obsidian, VS Code, and Logseq.
 
 <img src="./plugins/logseq/assets/logseq_showcase.png" alt="Inline Annotation in Logseq: Markdown source beside rendered furigana, phonetic glosses above and below, bouten, underlines, per-character readings, and nested ruby." width="560">
 
@@ -33,7 +33,7 @@ host-specific behavior and copyable examples.*
 *Inline Annotation (Ruby) in Obsidian. The [Obsidian guide](plugins/obsidian/)
 includes Reading-view and Live Preview screenshots.*
 
-The syntax is **v2**. The [specification](SPEC.md) defines its grammar, escaping,
+The [specification](SPEC.md) defines its grammar, escaping,
 source ranges, and rendering contract; the [shared fixtures](fixtures/) keep
 implementations aligned. This is a proposal with working implementations.
 
@@ -45,7 +45,7 @@ implementations aligned. This is a proposal with working implementations.
 | Inline Annotation (Ruby) for Obsidian | [Community directory](https://community.obsidian.md/plugins/inline-annotation) · [guide](plugins/obsidian/) | Reading view and Live Preview |
 | Inline Annotation for VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=baksili.vscode-inline-annotation) · [guide](plugins/vscode/) | Built-in Markdown preview |
 | `logseq-furigana-ruby` | Logseq Marketplace · [guide](plugins/logseq/) | Logseq renderer, macros, and conversion commands |
-| `marked-inline-annotation` | [Workspace pilot](packages/marked/) | Inline tokenizer for Marked 18 |
+| `marked-inline-annotation` | [Package guide](packages/marked/) | Inline tokenizer for Marked 18 |
 | `satteri-inline-annotation` | [Local pilot](packages/satteri/) | Two-phase Sätteri adapter; not published to npm |
 
 ## Install
@@ -108,7 +108,7 @@ Space-separated readings can align per character:
 ```
 
 Annotation parentheses must balance; use `\(` or `\)` for standalone literal
-parentheses. See [the v2 specification](SPEC.md) for the complete grammar and
+parentheses. See [the specification](SPEC.md) for the complete grammar and
 compatibility notes, including migration from the earlier first-close rule.
 
 The [playground](packages/markdown-it/examples/playground.html) and
@@ -172,7 +172,7 @@ All integrations now share this monorepo, continuing the original Obsidian
 repository with its stars, history, plugin IDs, and update channels preserved
 ([migration details](docs/MIGRATION.md)).
 
-Further reading: [roadmap](docs/ROADMAP.md) · [v2 design rationale](docs/v2-rationale.md)
+Further reading: [roadmap](docs/ROADMAP.md) · [design history](docs/v2-rationale.md)
 · [adapter contract and future ports](docs/ADAPTERS.md).
 
 ## License

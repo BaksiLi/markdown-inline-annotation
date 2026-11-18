@@ -1,7 +1,7 @@
 {
   "name": "marked-inline-annotation",
   "version": "0.8.4",
-  "description": "Marked inline extension for the Inline Annotation syntax and canonical renderer.",
+  "description": "Inline Annotation for Marked. Render ruby, furigana, interlinear glosses, bouten, and line marks in Markdown.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,7 +20,8 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm run typecheck && npm test && npm pack --dry-run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
   },
   "keywords": [
     "marked",
@@ -51,5 +52,7 @@
   "bugs": {
     "url": "https://github.com/BaksiLi/markdown-inline-annotation/issues"
   },
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  }
 }
