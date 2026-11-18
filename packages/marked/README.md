@@ -14,7 +14,7 @@ import { Marked } from "marked";
 import inlineAnnotation from "marked-inline-annotation";
 
 const md = new Marked(inlineAnnotation());
-console.log(md.parse("A [gloss]^^((semi-)formal artefact) beside **東京^^(とうきょう)**."));
+console.log(md.parse("駅前の[図書館]^^(としょかん)で会いましょう。"));
 ```
 
 The inline tokenizer consumes a complete annotation at the current cursor.

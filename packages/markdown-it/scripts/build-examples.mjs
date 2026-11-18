@@ -16,6 +16,7 @@ const root = resolve(here, "..");
 const md = new MarkdownIt().use(inlineAnnotationPlugin);
 
 const examples = [
+  "駅前の[図書館]^^(としょかん)で会いましょう。",
   "[漢字]^^(かんじ) and cat^_(/kæt/)",
   "[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)",
   "[重要語句]^^(じゅうようごく|.-) and [強調]^^(..)^_(.~)",
@@ -107,9 +108,7 @@ const fixtureExamples = fixtureCorpus.cases.map(({ id, category, name, input }) 
   input,
 }));
 
-const defaultSource = `[漢字]^^(かんじ) and cat^_(/kæt/)
-[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)
-[重要語句]^^(じゅうようごく|.-)`;
+const defaultSource = examples.join("\n");
 
 const playgroundHtml = `<!doctype html>
 <html lang="en">
