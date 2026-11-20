@@ -2,7 +2,7 @@
   "name": "vscode-inline-annotation",
   "displayName": "Inline Ruby Annotation",
   "description": "Render [base]^^(ruby) Inline Annotation syntax in VS Code's built-in Markdown preview.",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "publisher": "baksili",
   "license": "MIT",
   "engines": {
@@ -41,7 +41,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "markdown-it-inline-annotation": "^0.8.4"
+    "markdown-it-inline-annotation": "^0.8.5"
   },
   "devDependencies": {
     "@types/markdown-it": "^13.0.0",

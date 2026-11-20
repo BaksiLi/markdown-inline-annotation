@@ -1,6 +1,6 @@
 {
   "name": "markdown-inline-annotation",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "description": "The Inline Annotation specification, conformance corpus, and editor integrations.",
   "license": "MIT",

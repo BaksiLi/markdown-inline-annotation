@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.5
+
+- Use the faster shared parser in Markdown preview while preserving the
+  host's code and link boundaries.
+
 ## 0.8.4
 
 - Resolve shared core types from workspace source before the core is built,

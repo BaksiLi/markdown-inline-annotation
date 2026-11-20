@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.5
+
+- Keep escaped pipes and line-mark glyphs literal in eligible Reading View
+  paragraphs. Preserve code, links, and other host formatting boundaries.
+- Share annotation rendering with the core and sync the showcase examples.
+
 ## 0.8.4
 
 - Create annotation elements with Obsidian's `createEl` helpers in their

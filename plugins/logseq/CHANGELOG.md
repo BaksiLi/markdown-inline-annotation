@@ -1,9 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.8.5]
 
 - Preserve Logseq's original DOM nodes when displaying inline annotations.
   React can now reconcile the affected block when it is edited or rerendered.
+- Convert between Markdown and representable Logseq macros from the block
+  menu. Preserve escaped readings, code spans, and unsupported source.
 - Pin the official Logseq SDK to `@logseq/libs@0.3.6` to update the embedded
   dependencies tracked in [logseq/logseq#13970](https://github.com/logseq/logseq/issues/13970).
 - Include the SDK's third-party notices in the plugin ZIP and compare them with

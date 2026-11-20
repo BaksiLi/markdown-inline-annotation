@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.5
+
+- Normalize the positions of inline child nodes independently of their
+  paragraphs, preserving link and code boundaries with UTF-8 and UTF-16 hosts.
+- Exercise the shared showcase through the preset.
+
 ## 0.8.4
 
 - Resolve shared core types directly from workspace source in a clean

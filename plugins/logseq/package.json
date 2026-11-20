@@ -1,6 +1,6 @@
 {
   "name": "logseq-furigana-ruby",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Logseq plugin that renders [base]^^(ruby) Inline Annotation syntax for ruby/furigana and glosses.",
   "main": "dist/index.html",
   "author": "Baksi Li <myself@baksili.codes>",
@@ -29,7 +29,7 @@
   "license": "MIT",
   "dependencies": {
     "@logseq/libs": "0.3.6",
-    "markdown-it-inline-annotation": "^0.8.4"
+    "markdown-it-inline-annotation": "^0.8.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

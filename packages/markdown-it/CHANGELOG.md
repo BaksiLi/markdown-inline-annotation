@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.5
+
+- Split the scanner, models, HTML renderer, and DOM renderer. Export the
+  shared DOM renderer as `markdown-it-inline-annotation/dom`.
+- Avoid repeated scanning on long malformed input and preserve the host's
+  code, links, image labels, and other Markdown boundaries.
+- Keep a standalone ESM core for the browser playground and SilverBullet.
+
 ## 0.8.0
 
 - Move development and releases to the Inline Annotation monorepo.
