@@ -36,7 +36,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "npm run build && node test/preview.test.mjs",
+    "test": "npm run build && node --test test/preview.test.mjs",
     "check": "npm run typecheck && npm test && node scripts/check-package.mjs",
     "typecheck": "tsc --noEmit"
   },

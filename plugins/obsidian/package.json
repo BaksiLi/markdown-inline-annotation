@@ -14,13 +14,14 @@
     "url": "https://github.com/BaksiLi/markdown-inline-annotation/issues"
   },
   "scripts": {
-    "build": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs --prod",
     "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run build && npm test && node scripts/check-package.mjs",
-    "install:vault": "npm run build && node scripts/install-vault.mjs"
+    "install:vault": "node esbuild.config.mjs && node scripts/install-vault.mjs"
   },
   "dependencies": {
+    "entities": "9.0.0",
     "markdown-it-inline-annotation": "^0.8.4"
   },
   "devDependencies": {

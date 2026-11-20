@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "npm run build && node --test test/*.test.mjs",
-    "check": "npm run typecheck && npm test && npm pack --dry-run",
+    "check": "npm run typecheck && npm test && npm pack --dry-run --ignore-scripts",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run build"
   },

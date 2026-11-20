@@ -151,6 +151,17 @@
       <section>
         <div>
           <h2>Markdown</h2>
+          <pre><code>駅前の[図書館]^^(としょかん)で会いましょう。</code></pre>
+        </div>
+        <div>
+          <h2>Rendered</h2>
+          <div class="rendered"><p>駅前の<ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">図書館<rp>(</rp><rt>としょかん</rt><rp>)</rp></ruby>で会いましょう。</p></div>
+        </div>
+      </section>
+
+      <section>
+        <div>
+          <h2>Markdown</h2>
           <pre><code>[漢字]^^(かんじ) and cat^_(/kæt/)</code></pre>
         </div>
         <div>
@@ -173,22 +184,44 @@
       <section>
         <div>
           <h2>Markdown</h2>
-          <pre><code>[重要語句]^^(じゅうようごく|.-) and [強調]^^(..)^_(.~)</code></pre>
+          <pre><code>Frege 把「函數」描述為某種 [不飽和實體]^^(unsaturated entity)：它本身帶有「空位」，需要論元來「補足」才能產生一個完整的值。</code></pre>
         </div>
         <div>
           <h2>Rendered</h2>
-          <div class="rendered"><p><ruby class="ia-ruby ia-ruby-over ia-ruby-mixed ia-underline" style="ruby-position:over;text-decoration-line:underline;text-underline-offset:0.15em">重要語句<rp>(</rp><rt>じゅうようごく</rt><rp>)</rp></ruby> and <span class="ia-bouten ia-bouten-over ia-underline ia-underline-wavy" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration-line:underline;text-underline-offset:0.15em;text-decoration-style:wavy">強調</span></p></div>
+          <div class="rendered"><p>Frege 把「函數」描述為某種 <ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">不飽和實體<rp>(</rp><rt>unsaturated entity</rt><rp>)</rp></ruby>：它本身帶有「空位」，需要論元來「補足」才能產生一個完整的值。</p></div>
         </div>
       </section>
 
       <section>
         <div>
           <h2>Markdown</h2>
-          <pre><code>[[護]^^(まも)れ]^_(プロテゴ)</code></pre>
+          <pre><code>Read [重要語句]^^(じゅうようごく|.-) before moving on.</code></pre>
         </div>
         <div>
           <h2>Rendered</h2>
-          <div class="rendered"><p><ruby class="ia-ruby ia-ruby-under" style="ruby-position:under"><ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">護<rp>(</rp><rt>まも</rt><rp>)</rp></ruby>れ<rp>(</rp><rt>プロテゴ</rt><rp>)</rp></ruby></p></div>
+          <div class="rendered"><p>Read <ruby class="ia-ruby ia-ruby-over ia-ruby-mixed ia-underline" style="ruby-position:over;text-decoration-line:underline;text-underline-offset:0.15em">重要語句<rp>(</rp><rt>じゅうようごく</rt><rp>)</rp></ruby> before moving on.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <div>
+          <h2>Markdown</h2>
+          <pre><code>An [important term]^^(..)^_(.~) in context.</code></pre>
+        </div>
+        <div>
+          <h2>Rendered</h2>
+          <div class="rendered"><p>An <span class="ia-bouten ia-bouten-over ia-underline ia-underline-wavy" style="text-emphasis:filled dot;-webkit-text-emphasis:filled dot;text-emphasis-position:over right;-webkit-text-emphasis-position:over right;text-decoration-line:underline;text-underline-offset:0.15em;text-decoration-style:wavy">important term</span> in context.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <div>
+          <h2>Markdown</h2>
+          <pre><code>The spell [[護]^^(まも)れ]^_(プロテゴ) appears in the text.</code></pre>
+        </div>
+        <div>
+          <h2>Rendered</h2>
+          <div class="rendered"><p>The spell <ruby class="ia-ruby ia-ruby-under" style="ruby-position:under"><ruby class="ia-ruby ia-ruby-over" style="ruby-position:over">護<rp>(</rp><rt>まも</rt><rp>)</rp></ruby>れ<rp>(</rp><rt>プロテゴ</rt><rp>)</rp></ruby> appears in the text.</p></div>
         </div>
       </section>
     </main>

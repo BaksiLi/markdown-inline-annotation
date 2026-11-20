@@ -1,6 +1,8 @@
 const assert = require("node:assert/strict");
+const { test } = require("node:test");
 const { readFileSync } = require("node:fs");
 const MarkdownIt = require("markdown-it");
+const { assertRenderFixture } = require("../../scripts/assert-render-fixture.cjs");
 const {
   inlineAnnotationPlugin,
   renderInlineAnnotationsToHtml,
@@ -21,11 +23,6 @@ function md(options) {
 
 function inline(input, options) {
   return md(options).render(input).trim().replace(/^<p>/, "").replace(/<\/p>$/, "");
-}
-
-const tests = [];
-function test(name, fn) {
-  tests.push([name, fn]);
 }
 
 function hasAll(value, parts) {
@@ -184,33 +181,15 @@ test("markdown-it is an optional peer for core-only consumers", () => {
 });
 
 for (const fixture of htmlRenderFixtureCorpus.cases) {
-  test(`shared fixture ${fixture.id}: ${fixture.name}`, () => {
-    const html = inline(fixture.input, fixture.options);
-    hasAll(html, fixture.contains || []);
-    hasNone(html, fixture.notContains || []);
-    for (const count of fixture.counts || []) {
-      assert.equal(
-        html.split(count.pattern).length - 1,
-        count.count,
-        `Expected ${count.pattern} count ${count.count} in ${html}`
-      );
-    }
+  test(`shared fixture ${fixture.id}: ${fixture.name}`, { skip: fixture.hostSkip?.join(", ") }, () => {
+    assertRenderFixture(renderInlineAnnotationsToHtml(fixture.input, fixture.options), fixture);
+    assertRenderFixture(inline(fixture.input, fixture.options), fixture);
   });
 }
-
-test("basic bracketed over ruby", () => {
-  const html = inline("[漢字]^^(かんじ)");
-  hasAll(html, ['<ruby class="ia-ruby ia-ruby-over"', "漢字", "<rt>かんじ</rt>"]);
-});
 
 test("basic bracketed under ruby", () => {
   const html = inline("[base]^_(ann)");
   hasAll(html, ['<ruby class="ia-ruby ia-ruby-under"', 'style="ruby-position:under"', "<rt>ann</rt>"]);
-});
-
-test("abbreviated ruby", () => {
-  const html = inline("東京^^(とうきょう)");
-  hasAll(html, ["東京", "<rt>とうきょう</rt>"]);
 });
 
 test("multiple annotations in one paragraph", () => {
@@ -219,46 +198,15 @@ test("multiple annotations in one paragraph", () => {
   assert.equal((html.match(/<ruby/g) || []).length, 2);
 });
 
-test("two-slot pipe annotation", () => {
-  const html = inline("[北京]^^(ペキン|Beijing)");
-  hasAll(html, ["ia-ruby-double", "<rt>ペキン</rt>", "<rt>Beijing</rt>"]);
-});
-
-test("mixed chaining annotation", () => {
-  const html = inline("[base]^^(over)^_(under)");
-  hasAll(html, ["ia-ruby-double", "<rt>over</rt>", "<rt>under</rt>"]);
-});
-
-test("reverse chained annotation is position-driven", () => {
-  const html = inline("[base]^_(under)^^(over)");
-  hasAll(html, ["ia-ruby-double", "<rt>over</rt>", "<rt>under</rt>"]);
-});
-
-test("same-operator chain is not merged", () => {
-  const html = inline("[base]^^(a)^^(b)");
-  assert.ok(!html.includes("ia-ruby-double"));
-  assert.ok(html.includes("^^(b)"));
-});
-
 test("bouten over", () => {
   const html = inline("[漢字]^^(..)");
   hasAll(html, ['<span class="ia-bouten ia-bouten-over"', "text-emphasis:filled dot", "漢字"]);
-});
-
-test("bouten both slots", () => {
-  const html = inline("[漢字]^^(..)^_(..)");
-  hasAll(html, ["ia-bouten-over", "ia-bouten-under"]);
 });
 
 test("underline variants", () => {
   hasAll(inline("[base]^_(.-)"), ['<span class="ia-underline"', "text-decoration-line:underline"]);
   hasAll(inline("[base]^_(.~)"), ["ia-underline-wavy", "text-decoration-style:wavy"]);
   hasAll(inline("[base]^_(.=)"), ["ia-underline-double", "text-decoration-style:double"]);
-});
-
-test("ruby plus underline through pipe notation", () => {
-  const html = inline("[重要語句]^^(じゅうようごく|.-)");
-  hasAll(html, ["ia-ruby-mixed", "ia-underline", "<rt>じゅうようごく</rt>"]);
 });
 
 test("bouten plus wavy underline through chaining", () => {
@@ -295,12 +243,6 @@ test("independent overline and underline styles use separate wrappers", () => {
     html,
     /<span class="ia-overline" style="text-decoration-line:overline"><span class="ia-underline ia-underline-wavy" style="text-decoration-line:underline;text-underline-offset:0\.15em;text-decoration-style:wavy">漢字<\/span><\/span>/
   );
-});
-
-test("escaped over-slot mark stays ruby text", () => {
-  const html = inline("[base]^^(\\.-)");
-  hasAll(html, ["<ruby", "<rt>.-</rt>"]);
-  hasNone(html, ["ia-overline"]);
 });
 
 test("per-character alignment", () => {
@@ -450,6 +392,76 @@ test("links are left to markdown-it", () => {
   hasAll(html, ['<a href="https://example.com">link</a>', "<rt>かんじ</rt>"]);
 });
 
+for (const [name, source] of [
+  ["inline link label", "[[字]^^(gloss)](/dest)"],
+  ["reference link label", "[label [字]^^(gloss)][ref]\n\n[ref]: /dest"],
+  ["image alt text", "![a [字]^^(*gloss* &amp; 'sound')](/img)"],
+  ["nested image alt text", "![first ![[字]^^(gloss)](/inner)](/outer)"],
+  ["raw HTML anchor", '<a href="/dest">[字]^^(gloss)</a>'],
+  ["raw HTML code", "before <code>[字]^^(gloss)</code> after"],
+  ["bare autolink", "www.example.com/path^^(x)"],
+  ["autolink with a scheme", "https://example.com/a^^(x)"],
+]) {
+  test(`preserves markdown-it ${name}`, () => {
+    const host = new MarkdownIt({ html: true, linkify: true });
+    const extended = new MarkdownIt({ html: true, linkify: true }).use(inlineAnnotationPlugin);
+    const input = `${source}\n\n[外]^^(outside)`;
+    assert.equal(extended.render(input), host.render(source) + md().render("[外]^^(outside)"));
+  });
+}
+
+test("preserves host emphasis around abbreviated bases", () => {
+  const parser = md();
+  const ruby = parser.renderInline("字^^(gloss)");
+  assert.equal(parser.renderInline("lead _字^^(gloss)_"), `lead <em>${ruby}</em>`);
+  assert.equal(parser.renderInline("lead ~~字^^(gloss)~~"), `lead <s>${ruby}</s>`);
+});
+
+test("resumes after a failed run of host punctuation", () => {
+  const prefix = "-".repeat(4096);
+  const parser = md();
+  assert.equal(parser.renderInline(`${prefix} [字]^^(gloss)`),
+    `${prefix} ${parser.renderInline("[字]^^(gloss)")}`);
+});
+
+test("renders deeply nested bases through the source and model APIs", () => {
+  const depth = 4096;
+  const source = "[".repeat(depth) + "字" + "]^^(r)".repeat(depth);
+  const html = renderInlineAnnotationsToHtml(source);
+  assert.equal(html.split("<rt>r</rt>").length - 1, depth);
+  assert.equal(html.split("<ruby ").length - 1, depth);
+  assert.equal(renderInlineAnnotationModelToHtml(findInlineAnnotationModel(source)), html);
+});
+
+test("bounded scans preserve UTF-16 source ranges and pipe/chain equivalence", () => {
+  const prefix = "😀 prefix ";
+  const bases = ["字", "𠮷野", "e\u0301", "word pair", String.raw`a\[b\]`, "[字]^^(inner)"];
+  const slots = ["ruby", "..", ".-", "(a(b)c)", String.raw`a\|b`, String.raw`\.-`];
+
+  for (const base of bases) {
+    for (const over of slots) {
+      for (const under of slots) {
+        const pipe = `[${base}]^^(${over}|${under})`;
+        const chain = `[${base}]^^(${over})^_(${under})`;
+        const input = `${prefix}${chain} [後]^^(later)`;
+        const end = prefix.length + chain.length;
+        const [model] = findInlineAnnotationModels(input, prefix.length, end);
+        assert.equal(model.start, prefix.length);
+        assert.equal(model.end, end);
+        assert.equal(model.source, chain);
+        assert.equal(model.base.raw, base);
+        assert.deepEqual(model.slots.map((slot) => slot.raw), [over, under]);
+        for (const range of [model.base, ...model.slots]) {
+          assert.equal(input.slice(range.start, range.end), range.raw);
+        }
+        const [truncated] = findInlineAnnotationModels(input, prefix.length, end - 1);
+        assert.equal(truncated.slots.length, 1);
+        assert.equal(renderInlineAnnotationModelToHtml(model), renderInlineAnnotationsToHtml(pipe));
+      }
+    }
+  }
+});
+
 test("core renderer can continue after non-annotation brackets", () => {
   const html = renderInlineAnnotationsToHtml("[link](url) [漢字]^^(かんじ)");
   hasAll(html, ["[link](url)", "<rt>かんじ</rt>"]);
@@ -581,17 +593,33 @@ test("playground embeds fixture data without executable HTML sentinels", () => {
   assert.ok(!html.includes('"[<img src=x>]^^(<script>x</script>)"'));
 });
 
-let passed = 0;
-for (const [name, fn] of tests) {
-  try {
-    fn();
-    passed++;
-    console.log(`ok ${passed} - ${name}`);
-  } catch (error) {
-    console.error(`not ok ${passed + 1} - ${name}`);
-    console.error(error);
-    process.exit(1);
+test("recovers valid nested candidates after a long malformed prefix", () => {
+  const annotation = "[字]^^(reading)";
+  for (const prefix of ["x".repeat(8000) + " ", "[".repeat(4000), "a^^(".repeat(1000)]) {
+    const source = prefix + annotation;
+    assert.deepEqual(
+      findInlineAnnotationModels(source).map(({ start, end, source }) => [start, end, source]),
+      [[prefix.length, source.length, annotation]],
+    );
   }
-}
+});
 
-console.log(`${passed} tests passed`);
+test("renders names that coincide with JavaScript object properties as ruby text", () => {
+  for (const text of ["constructor", "__proto__", "toString"]) {
+    assert.match(renderInlineAnnotationsToHtml(`[字]^^(${text})`), new RegExp(`<rt>${text}</rt>`));
+  }
+});
+
+test("escapes renderer options in the contexts where they are emitted", () => {
+  const html = renderInlineAnnotationsToHtml("[字]^^(reading)", {
+    classPrefix: 'my"annotation',
+    fallbackParens: "<&",
+  });
+  assert.match(html, /class="my&quot;annotation-ruby my&quot;annotation-ruby-over"/);
+  assert.match(html, /<rp>&lt;<\/rp><rt>reading<\/rt><rp>&amp;<\/rp>/);
+});
+
+test("aligns literal base text when its nested-looking syntax is disabled", () => {
+  const html = renderInlineAnnotationsToHtml("[a^^(x)]^_(A B C D E F)", { enableAbbreviated: false });
+  assert.equal(html.split("<rt>").length - 1, 6);
+});

@@ -20,18 +20,4 @@ export interface HtmlRenderFixture {
   counts?: HtmlRenderFixtureCount[];
 }
 
-export interface HtmlRenderFixtureCorpus {
-  version: number;
-  description: string;
-  fixtureTypes: Record<HtmlRenderFixture["assertionType"], string>;
-  fixtureSchema: {
-    commonRequired: string[];
-    byAssertionType: Record<HtmlRenderFixture["assertionType"], { required: string[]; forbidden: string[] }>;
-  };
-  cases: HtmlRenderFixture[];
-}
-
-// Host-neutral Inline Annotation behavior. Keep this wrapper thin so the JSON
-// corpus can move between markdown-it, Logseq, Obsidian, and future core tests.
-export const htmlRenderFixtureCorpus = corpus as HtmlRenderFixtureCorpus;
-export const htmlRenderFixtures = htmlRenderFixtureCorpus.cases;
+export const htmlRenderFixtures = corpus.cases as HtmlRenderFixture[];

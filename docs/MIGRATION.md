@@ -88,23 +88,26 @@ and [npm trusted-publishing guide](https://docs.npmjs.com/trusted-publishers/).
 The core and Marketplace connections were verified with 0.8.2: the registry tarball
 and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
 
-## Open handover items
+## Directory status
 
 - **Logseq directory:** [logseq/marketplace#965](https://github.com/logseq/marketplace/pull/965)
-  changes only `packages/logseq-furigana-ruby/manifest.json`, preserving the
-  directory name and IDs; generated `plugins.json` is not edited. Keep the old
-  Logseq repository active until the PR merges and updates are verified, then
-  archive it. GitHub archive mode would block its releases, so it cannot serve
-  as an ongoing mirror.
+  merged on November 18, 2026. The marketplace manifest points to the
+  monorepo and keeps the existing directory name and plugin ID. Keep the old
+  repository available until an installed copy updates through the new route.
 - **Obsidian directory:** both the live listing and the community plugin index
   use **Inline Annotation (Ruby)**, ID `inline-annotation`, in the canonical
   repository.
 - **Marked directory:** [Known Extensions submission](https://github.com/markedjs/marked/pull/4256).
-- **Logseq SDK advisory:** `@logseq/libs@0.0.17` ships a prebundled
-  `dist/lsplugin.user.js` embedding DOMPurify `2.3.8` and lodash `4.17.21`.
-  Dependency overrides cannot replace that code, and no official SDK release
-  fixes it. Obsidian's bundle does not contain the SDK. This needs a supported
-  SDK upgrade or a separately reviewed, reproducible rebuild.
+
+## Logseq SDK update
+
+The Logseq workspace pins `@logseq/libs@0.3.6`, the official release on npm's
+`next` tag, to pick up the dependency refresh. The plugin ZIP ships the SDK's
+third-party notices and contains DOMPurify `3.4.18`. The workspace's production
+dependency audit returned zero findings after the upgrade on 2026-11-20.
+Block-menu conversion was verified in Logseq `0.10.15` using a temporary graph.
+[Upstream issue](https://github.com/logseq/logseq/issues/13970) ·
+[SDK package](https://www.npmjs.com/package/@logseq/libs/v/0.3.6)
 
 ## Obsidian review
 

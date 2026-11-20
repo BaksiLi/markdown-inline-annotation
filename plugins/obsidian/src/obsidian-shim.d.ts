@@ -5,6 +5,7 @@ declare module "obsidian" {
 
   export interface MarkdownPostProcessorContext {
     sourcePath: string;
+    getSectionInfo(element: HTMLElement): { text: string; lineStart: number; lineEnd: number } | null;
   }
 
   export class Plugin {

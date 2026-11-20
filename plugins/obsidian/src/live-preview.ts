@@ -1,11 +1,10 @@
 import type { Extension, Range } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
-import type { InlineAnnotationModel } from "markdown-it-inline-annotation/core";
+import { hasInlineAnnotation, type InlineAnnotationModel } from "markdown-it-inline-annotation/core";
 import { editorLivePreviewField } from "obsidian";
 import { collectLivePreviewHostRanges } from "./live-preview-host-ranges";
 import { planInlineAnnotationLivePreviewLine } from "./live-preview-line";
-import { renderInlineAnnotationModelToFragment } from "./render-dom";
-import { OBSIDIAN_RENDER_OPTIONS } from "./render-options";
+import { renderAnnotation } from "./render-dom";
 
 class InlineAnnotationWidget extends WidgetType {
   constructor(private readonly model: InlineAnnotationModel) {
@@ -20,7 +19,7 @@ class InlineAnnotationWidget extends WidgetType {
     // Create in the editor's own document so popout windows keep working.
     const document = view.dom.ownerDocument;
     const element = document.createDocumentFragment().createEl("span", { cls: "ia-live-preview-widget" });
-    element.append(renderInlineAnnotationModelToFragment(this.model, document, OBSIDIAN_RENDER_OPTIONS));
+    element.append(renderAnnotation(this.model, document));
     return element;
   }
 
@@ -49,7 +48,8 @@ function buildDecorations(view: EditorView): DecorationSet {
       if (seenLines.has(line.from)) continue;
       seenLines.add(line.from);
 
-      const text = view.state.doc.sliceString(line.from, line.to);
+      const text = line.text;
+      if (!hasInlineAnnotation(text)) continue;
       const hostSkipRanges = collectLivePreviewHostRanges({
         view,
         text,

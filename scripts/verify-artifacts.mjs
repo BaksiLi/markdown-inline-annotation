@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { capture, npm, readJson, root, run } from "./lib.mjs";
 import { hasPublishedMarkedAsset, releaseAssetNames, verifyReleaseChecksums } from "./release-assets.mjs";
 
@@ -18,9 +20,20 @@ const unpackJson = (archive, path) => JSON.parse(capture("unzip", ["-p", archive
 const corePackage = JSON.parse(capture("tar", ["-xOf", tarball, "package/package.json"]));
 assert.equal(corePackage.name, "markdown-it-inline-annotation");
 assert.equal(corePackage.version, version);
-assert.equal(unpackJson(logseq, "package.json").name, "logseq-furigana-ruby");
-assert.equal(unpackJson(logseq, "package.json").version, version);
-assert.equal(unpackJson(logseq, "package.json").logseq.id, "_baksili_logseq-furigana-ruby");
+const hasDomExport = Boolean(corePackage.exports?.["./dom"]);
+if (!published) assert.ok(hasDomExport, "The core package must export ./dom");
+const logseqPackage = unpackJson(logseq, "package.json");
+assert.equal(logseqPackage.name, "logseq-furigana-ruby");
+assert.equal(logseqPackage.version, version);
+assert.equal(logseqPackage.logseq.id, "_baksili_logseq-furigana-ruby");
+if (!published) {
+  const requireLogseq = createRequire(resolve(root, "plugins/logseq/package.json"));
+  const noticeName = "lsplugin.user.js.LICENSE.txt";
+  const sdkDirectory = dirname(requireLogseq.resolve("@logseq/libs"));
+  const sdkNotice = readFileSync(resolve(sdkDirectory, noticeName));
+  const packagedNotice = execFileSync("unzip", ["-p", logseq, `dist/assets/${noticeName}`]);
+  assert.deepEqual(packagedNotice, sdkNotice, "Logseq ZIP must ship the SDK's third-party notices verbatim");
+}
 assert.equal(unpackJson(vsix, "extension/package.json").name, "vscode-inline-annotation");
 assert.equal(unpackJson(vsix, "extension/package.json").publisher, "baksili");
 assert.equal(unpackJson(vsix, "extension/package.json").version, version);
@@ -29,7 +42,9 @@ assert.ok(capture("unzip", ["-p", vsix, "extension/node_modules/markdown-it-inli
   .includes("findInlineAnnotationModel"));
 assert.equal(JSON.parse(readFileSync(resolve(artifacts, "manifest.json"), "utf8")).id, "inline-annotation");
 assert.equal(JSON.parse(readFileSync(resolve(artifacts, "manifest.json"), "utf8")).version, version);
-assert.ok(readFileSync(resolve(artifacts, "main.js"), "utf8").length > 1000);
+const obsidianBundle = readFileSync(resolve(artifacts, "main.js"), "utf8");
+assert.ok(obsidianBundle.length > 1000);
+if (!published) assert.ok(!obsidianBundle.includes("sourceMappingURL=data:"), "Obsidian release must use the production build");
 
 const consumer = mkdtempSync(resolve(tmpdir(), "inline-annotation-consumer-"));
 try {
@@ -44,6 +59,11 @@ try {
     assert.throws(() => require.resolve("markdown-it"), { code: "MODULE_NOT_FOUND" });
     assert.match(renderInlineAnnotationsToHtml("[x]^^((semi-)formal artefact)"), /\\(semi-\\)formal artefact/);
     assert.ok(require("markdown-it-inline-annotation/fixtures/models.json").cases.length);
+    if (${hasDomExport}) {
+      const dom = await import("markdown-it-inline-annotation/dom");
+      assert.equal(typeof dom.renderInlineAnnotationModelToFragment, "function");
+      assert.equal(typeof require("markdown-it-inline-annotation/dom").renderInlineAnnotationModelToFragment, "function");
+    }
   `], { cwd: consumer });
   if (withMarked) {
     const markedArchive = resolve(artifacts, `marked-inline-annotation-${version}.tgz`);

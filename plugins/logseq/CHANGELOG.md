@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- Preserve Logseq's original DOM nodes when displaying inline annotations.
+  React can now reconcile the affected block when it is edited or rerendered.
+- Pin the official Logseq SDK to `@logseq/libs@0.3.6` to update the embedded
+  dependencies tracked in [logseq/logseq#13970](https://github.com/logseq/logseq/issues/13970).
+- Include the SDK's third-party notices in the plugin ZIP and compare them with
+  the installed SDK during packaging verification.
+
 ## 0.8.3
 
 - Replace HTML assignment in live DOM rendering with a restricted DOM builder.
