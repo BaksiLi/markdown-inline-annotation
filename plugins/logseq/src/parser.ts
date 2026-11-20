@@ -78,7 +78,7 @@ function escapeHtml(input: string): string {
 }
 
 function escapeMarkupBase(input: string): string {
-  return input.replace(/\\/g, "\\\\").replace(/[\[\]]|\^(?=(?:\^|_)\()/g, "\\$&");
+  return input.replace(/\\/g, "\\\\").replace(/[[\]]|\^(?=(?:\^|_)\()/g, "\\$&");
 }
 
 function escapeMarkupAnnotation(input: string): string {

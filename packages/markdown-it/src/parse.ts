@@ -44,7 +44,7 @@ function nextPipe(input: string, start: number): number {
 
 // The base run stops at the first caret or syntax boundary. If that run does
 // not introduce a valid annotation, none of its suffixes can introduce one.
-const abbreviatedBase = /[^\s\[\]()<>\x60*&!^]+/y;
+const abbreviatedBase = /[^\s[\]()<>\x60*&!^]+/y;
 // Match markdown-it's text-rule terminators so an earlier host rule still gets
 // its turn when no annotation starts before the terminator.
 const markdownBlocker = /[\r\n!#$%&*+\-:<=>@[\\\]^_`{}~]/;
