@@ -44,9 +44,7 @@ jobs:
         env:
           RESUME_RELEASE: ${{ inputs.existing_release }}
       - run: npm ci
-      - run: npm run check
-        if: inputs.existing_release == ''
-      - run: npm run release:pack
+      - run: npm run check -- --pack
         if: inputs.existing_release == ''
       - name: Download the original public release
         if: inputs.existing_release != ''

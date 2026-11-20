@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { rubyToHTML, replaceRubyInElement, buildGeneratedFragment } from "./parser";
+import { rubyToHTML } from "./parser";
+import { decorateRubyInElement, observeRubyBlocks } from "./live-render";
 import { htmlRenderFixtures } from "./spec-fixtures";
+import sharedExamples from "../../../docs/examples/showcase.json";
 import parserSource from "./parser.ts?raw";
+import liveRendererSource from "./live-render.ts?raw";
+import domRendererSource from "../../../packages/markdown-it/src/dom.ts?raw";
 
 // Reference: what the previous innerHTML-based implementation produced for
 // renderer output. Used only as a test oracle.
@@ -15,7 +19,7 @@ function parsedReference(html: string): HTMLParagraphElement {
 function renderTextNode(text: string): HTMLParagraphElement {
   const host = document.createElement("p");
   host.append(document.createTextNode(text));
-  replaceRubyInElement(host);
+  decorateRubyInElement(host);
   return host;
 }
 
@@ -26,13 +30,12 @@ function renderTransparentRuns(runs: string[]): HTMLParagraphElement {
     span.textContent = run;
     host.append(span);
   }
-  replaceRubyInElement(host);
+  decorateRubyInElement(host);
   return host;
 }
 
 function expectSameDom(actual: Element, expected: Element): void {
   expect(actual.innerHTML).toBe(expected.innerHTML);
-  expect(actual.isEqualNode(expected)).toBe(true);
 }
 
 function expectOnlyGeneratedElements(host: Element): void {
@@ -78,9 +81,77 @@ describe("DOM rendering matches parsed renderer output", () => {
     expect(rendered.length).toBeGreaterThan(30);
   });
 
+  it("renders the shared showcase with the core semantics", () => {
+    for (const source of sharedExamples) {
+      expectSameDom(renderTextNode(source), parsedReference(rubyToHTML(source)));
+    }
+  });
+
   it("transparent split runs render as one expression", () => {
-    const host = renderTransparentRuns(["[漢", "字]^^(かん", "じ)"]);
-    expectSameDom(host, parsedReference(rubyToHTML("[漢字]^^(かんじ)")));
+    const runs = ["[漢", "字]^^(かん", "じ)"];
+    const host = renderTransparentRuns(runs);
+    const expected = parsedReference(rubyToHTML(runs.join("")));
+    expect(host.querySelector("ruby")?.outerHTML).toBe(expected.querySelector("ruby")?.outerHTML);
+    expect(host.textContent).toBe(expected.textContent);
+    expect(host.querySelectorAll("span")).toHaveLength(runs.length);
+  });
+});
+
+describe("Logseq host reconciliation", () => {
+  it("keeps source nodes attached when the host inserts and removes siblings", () => {
+    const host = document.createElement("span");
+    const prefix = document.createTextNode("A & B ");
+    const entity = document.createTextNode("&");
+    const source = document.createTextNode(String.raw` [字]^^(left\|right) after`);
+    const suffix = document.createTextNode("!");
+    host.append(prefix, entity, source, suffix);
+
+    const restore = decorateRubyInElement(host);
+    expect(host.querySelector("rt")?.textContent).toBe("left|right");
+    expect(host.textContent).toBe("A & B & 字(left|right) after!");
+    expect([prefix, entity, source, suffix].every((node) => node.parentNode === host)).toBe(true);
+    expect([prefix.data, entity.data, suffix.data]).toEqual(["A & B ", "&", "!"]);
+
+    const inserted = document.createTextNode("new ");
+    host.insertBefore(inserted, entity);
+    host.removeChild(prefix);
+    restore?.();
+    expect([...host.childNodes]).toEqual([inserted, entity, source, suffix]);
+    expect(host.textContent).toBe(String.raw`new & [字]^^(left\|right) after!`);
+  });
+
+  it("refreshes edited text, preserves a host write of an empty string, and restores on unmount", async () => {
+    const root = document.createElement("div");
+    const block = document.createElement("div");
+    block.className = "block-content";
+    const source = document.createTextNode("[字]^^(read");
+    const endOfReading = document.createTextNode("ing)");
+    block.append(source, endOfReading);
+    root.append(block);
+    const stop = observeRubyBlocks(root);
+    try {
+      expect(block.querySelector("rt")?.textContent).toBe("reading");
+      source.data = "[字]^^(updated)";
+      endOfReading.data = "";
+      await Promise.resolve();
+      expect(block.querySelectorAll("rt")).toHaveLength(1);
+      expect(block.querySelector("rt")?.textContent).toBe("updated");
+      expect(block.textContent).toBe("字(updated)");
+
+      block.remove();
+      await Promise.resolve();
+      expect([...block.childNodes]).toEqual([source, endOfReading]);
+      expect(block.textContent).toBe("[字]^^(updated)");
+
+      root.append(block);
+      await Promise.resolve();
+      expect(block.querySelector("rt")?.textContent).toBe("updated");
+      source.data = "[字]^^(last)";
+    } finally {
+      stop();
+    }
+    expect([...block.childNodes]).toEqual([source, endOfReading]);
+    expect(block.textContent).toBe("[字]^^(last)");
   });
 });
 
@@ -197,50 +268,7 @@ describe("private-use characters in source text", () => {
   });
 });
 
-describe("generated-grammar DOM builder", () => {
-  const build = (html: string) => buildGeneratedFragment(html, document);
-
-  it("decodes renderer escapes once", () => {
-    expect(build("&lt;b&gt; &amp;amp; &amp;lt; &quot;").textContent).toBe('<b> &amp; &lt; "');
-  });
-
-  it("rejects output outside the generated grammar", () => {
-    const rejected = [
-      "<img src=x>",
-      "<script>x</script>",
-      '<ruby onclick="x">a</ruby>',
-      '<span class="ia-ruby" style="color:red">a</span>',
-      '<span class="evil">a</span>',
-      '<span class="ia-ruby" class="ia-ruby">a</span>',
-      '<rt class="ia-ruby">a</rt>',
-      "<ruby>a</span>",
-      "<ruby>a",
-      "a</ruby>",
-      "</ruby class=\"ia-ruby\">",
-      "a & b",
-      "&copy;",
-      "&#60;img&#62;",
-      "<RUBY>a</RUBY>",
-      "a < b",
-    ];
-    for (const html of rejected) {
-      expect(() => build(html), html).toThrow();
-    }
-  });
-});
-
 describe("production live-render source safety", () => {
-  const start = parserSource.indexOf("// DOM live rendering");
-  const end = parserSource.indexOf("// Macro renderer helper");
-  const liveSection = parserSource.slice(start, end);
-
-  it("isolates the live DOM section", () => {
-    expect(start).toBeGreaterThan(0);
-    expect(end).toBeGreaterThan(start);
-    expect(liveSection).toContain("export function replaceRubyInElement");
-    expect(liveSection).toContain("function buildGeneratedFragment");
-  });
-
   it("uses no HTML assignment or parser sinks in the live path", () => {
     const sinks = [
       /\.innerHTML\b/,
@@ -254,7 +282,8 @@ describe("production live-render source safety", () => {
       /\beval\s*\(|new Function\s*\(/,
     ];
     for (const sink of sinks) {
-      expect(liveSection, String(sink)).not.toMatch(sink);
+      expect(liveRendererSource, String(sink)).not.toMatch(sink);
+      expect(domRendererSource, String(sink)).not.toMatch(sink);
     }
   });
 

@@ -1,6 +1,7 @@
 import type { MarkedExtension } from "marked";
 import {
   findInlineAnnotationModelBeforeMarkdown,
+  hasInlineAnnotation,
   renderInlineAnnotationModelToHtml,
   type InlineAnnotationOptions,
 } from "markdown-it-inline-annotation/core";
@@ -10,7 +11,7 @@ const starts = /\[|[\p{L}\p{M}\p{N}\p{So}.'’-]+/gu;
 const wordAtStart = /^[\p{L}\p{M}\p{N}\p{So}.'’-]+(?=\^(?:\^|_)\()/u;
 
 function* candidates(source: string, abbreviated: boolean) {
-  if (!source.includes("^^(") && !source.includes("^_(")) return;
+  if (!hasInlineAnnotation(source)) return;
   for (const match of source.matchAll(starts)) {
     if (match[0] === "[") {
       yield match.index;

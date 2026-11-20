@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { copyFileSync, readFileSync } from "node:fs";
 import { npm, readJson, root, run, workspaces } from "./lib.mjs";
 
-const task = process.argv[2];
+const [task, ...args] = process.argv.slice(2);
 assert.ok(["build", "test", "check"].includes(task), "Expected build, test, or check");
+const pack = task === "check" && args.length === 1 && args[0] === "--pack";
+assert.ok(args.length === 0 || pack, "Use --pack with check to verify release artifacts");
+
 const version = readJson("package.json").version;
 for (const workspace of workspaces) {
   const pkg = readJson(`${workspace}/package.json`);
@@ -20,14 +23,12 @@ for (const name of ["manifest.json", "versions.json"]) {
   );
 }
 
+if (task === "check") run(process.execPath, ["scripts/sync-showcase.mjs", "--check"]);
+
 for (const workspace of workspaces) {
-  const scripts = readJson(`${workspace}/package.json`).scripts;
-  const script = task === "check"
-    ? (scripts["check:release"] ? "check:release" : scripts.check ? "check" : "test")
-    : task;
-  run(npm, ["run", script, "--workspace", workspace]);
-  if (task === "check" && workspace === "plugins/logseq") {
-    run(npm, ["run", "build", "--workspace", workspace]);
+  run(npm, ["run", task, "--workspace", workspace]);
+  if (workspace === "packages/markdown-it" && task === "check") {
+    run(process.execPath, ["packages/markdown-it/scripts/build-examples.mjs", "--check"]);
   }
   if (workspace === "plugins/obsidian" && task !== "test") {
     for (const name of ["main.js", "styles.css"]) {
@@ -36,12 +37,7 @@ for (const workspace of workspaces) {
   }
 }
 if (task !== "build") {
-  run(process.execPath, [
-    "--test",
-    "scripts/publish.test.mjs",
-    "scripts/release-assets.test.mjs",
-    "scripts/download-stats.test.mjs",
-    "plugins/silverbullet/adapter.test.mjs",
-  ]);
+  run(process.execPath, ["--test", "scripts/*.test.mjs", "plugins/silverbullet/adapter.test.mjs"]);
 }
 if (task === "check") run("git", ["diff", "--check"]);
+if (pack) run(process.execPath, ["scripts/package.mjs", "--built"]);

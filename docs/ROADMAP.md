@@ -15,7 +15,7 @@ host adapters.
 | `obsidian-inline-annotation` | Reading view and Live Preview | `plugins/obsidian` |
 | `vscode-inline-annotation` | thin built-in Markdown preview adapter | `plugins/vscode` |
 | `satteri-inline-annotation` | two-phase Sätteri Markdown adapter; unpublished pilot | `packages/satteri` |
-| remark/unified | AST adapter | deferred until a real pipeline needs it |
+| remark/unified | WebPreview.vim ships a host-specific MDAST adapter | [consumer documentation](https://github.com/BaksiLi/webpreview.vim/blob/main/doc/extensions.md#annotation-and-source-ownership) |
 
 All workspaces now share one product release version.
 The historical milestones below retain their original package version numbers.
@@ -129,8 +129,11 @@ The initial scope is plain Markdown in paragraphs and headings, including list
 items and blockquotes. MDX and GFM table cells remain preserved but unrendered:
 MDX needs a safe literal-insertion contract, while table-cell positions include
 row delimiters and need a separate inline-container strategy. The adapter suite
-passes against both Cogitatum's Sätteri `0.9.5` and current `0.10.5`; a real
-Cogitatum production build remains the final pre-publication integration check.
+passes against Sätteri `0.9.5` and `0.10.5`. In an isolated build of the
+Cogitatum site, the packed 0.8.4 adapter and published 0.8.4 core passed all
+17 article-reading tests and the Astro production build. A sample Markdown
+page rendered furigana and a parenthesized gloss while preserving an inline
+code example. The next step is to update the site's pinned pilot package.
 
 ### Future neutral core boundary
 
@@ -153,9 +156,12 @@ neutral core.
 
 ### remark/unified
 
-Build `micromark-extension-inline-annotation`, `mdast-util-inline-annotation`,
-and `remark-inline-annotation` only when a concrete unified/MDX pipeline needs
-them. Source ranges and model fixtures should make that port mechanical.
+WebPreview.vim already uses a positioned `inlineAnnotation` node to select the
+original Markdown in Vim. Before extracting a general remark plugin, test a
+second unified pipeline that needs to serialize those nodes back to Markdown.
+Use the shared model fixtures to check the source ranges and round-trip the
+original spelling, including escapes. Browser selection and Vim byte columns
+belong to WebPreview.
 
 AST adapters are the right place to experiment with rich Markdown children in
 the base. Annotation slots remain plain text unless a later spec version defines

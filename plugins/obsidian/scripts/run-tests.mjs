@@ -1,22 +1,24 @@
-import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import esbuild from "esbuild";
+import { run } from "../../../scripts/lib.mjs";
 
-mkdirSync(new URL("../.test-build", import.meta.url), { recursive: true });
+const outdir = mkdtempSync(join(tmpdir(), "inline-annotation-obsidian-tests-"));
+const suites = ["postprocessor.test", "live-preview-ranges.test"];
 
-await esbuild.build({
-  bundle: true,
-  entryPoints: ["test/run-tests.ts"],
-  format: "cjs",
-  logLevel: "silent",
-  outfile: ".test-build/run-tests.cjs",
-  platform: "node",
-  target: "node20",
-});
+try {
+  await esbuild.build({
+    bundle: true,
+    entryPoints: suites.map((suite) => `test/${suite}.ts`),
+    format: "cjs",
+    outdir,
+    outExtension: { ".js": ".cjs" },
+    platform: "node",
+    target: "node22",
+  });
 
-const result = spawnSync(process.execPath, [".test-build/run-tests.cjs"], {
-  cwd: new URL("..", import.meta.url),
-  stdio: "inherit",
-});
-
-process.exit(result.status ?? 1);
+  run(process.execPath, ["--test", ...suites.map((suite) => join(outdir, `${suite}.cjs`))], { cwd: process.cwd() });
+} finally {
+  rmSync(outdir, { recursive: true, force: true });
+}

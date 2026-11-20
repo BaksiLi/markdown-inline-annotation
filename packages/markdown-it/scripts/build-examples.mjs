@@ -15,12 +15,7 @@ const root = resolve(here, "..");
 
 const md = new MarkdownIt().use(inlineAnnotationPlugin);
 
-const examples = [
-  "[漢字]^^(かんじ) and cat^_(/kæt/)",
-  "[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)",
-  "[重要語句]^^(じゅうようごく|.-) and [強調]^^(..)^_(.~)",
-  "[[護]^^(まも)れ]^_(プロテゴ)",
-];
+const examples = require("../docs/examples/showcase.json");
 
 function escapeHtml(value) {
   return value
@@ -107,9 +102,8 @@ const fixtureExamples = fixtureCorpus.cases.map(({ id, category, name, input }) 
   input,
 }));
 
-const defaultSource = `[漢字]^^(かんじ) and cat^_(/kæt/)
-[李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)
-[重要語句]^^(じゅうようごく|.-)`;
+const defaultSource = examples.join("\n");
+const check = process.argv.includes("--check");
 
 const playgroundHtml = `<!doctype html>
 <html lang="en">
@@ -390,7 +384,17 @@ ${css.replace(/^(?=.)/gm, "      ")}
 </html>
 `;
 
-writeFileSync(resolve(root, "examples/before-after.html"), beforeAfterHtml);
-writeFileSync(resolve(root, "examples/playground.html"), playgroundHtml);
-console.log("examples/before-after.html generated from live parser output");
-console.log("examples/playground.html generated from core renderer and shared fixtures");
+for (const [file, expected] of [
+  ["examples/before-after.html", beforeAfterHtml],
+  ["examples/playground.html", playgroundHtml],
+]) {
+  const path = resolve(root, file);
+  if (check) {
+    if (readFileSync(path, "utf8").replace(/\r\n/g, "\n") !== expected) {
+      throw new Error(`${file} is out of date. Run npm run examples:sync.`);
+    }
+  } else {
+    writeFileSync(path, expected);
+    console.log(`${file} generated from the shared showcase`);
+  }
+}

@@ -11,7 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "paths": { "markdown-it-inline-annotation/core": ["../../packages/markdown-it/src/core.ts"] },
+    "paths": {
+      "markdown-it-inline-annotation/core": ["../../packages/markdown-it/src/core.ts"],
+      "markdown-it-inline-annotation/dom": ["../../packages/markdown-it/src/dom.ts"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true

@@ -7,7 +7,8 @@
     "moduleResolution": "Bundler",
     "noEmit": true,
     "paths": {
-      "markdown-it-inline-annotation/core": ["../../packages/markdown-it/src/core.ts"]
+      "markdown-it-inline-annotation/core": ["../../packages/markdown-it/src/core.ts"],
+      "markdown-it-inline-annotation/dom": ["../../packages/markdown-it/src/dom.ts"]
     },
     "strict": true,
     "target": "ES2020"

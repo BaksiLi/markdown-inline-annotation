@@ -55,6 +55,13 @@ expression inside one eligible run, optionally join only transparent splits,
 and preserve any expression crossing a semantic boundary. Never flatten DOM
 text and then replace it without restoring node ownership.
 
+Use exact editor source for conversions. The DOM can lose the spelling of
+escapes and entity references while keeping the displayed characters. Test a
+conversion to a normalized source form for idempotence and compare its
+rendered semantics with the original. Preserve raw syntax when the target form
+cannot express its meaning. In Logseq, renderer macro slots provide a
+host-managed entry point for literal readings that the Markdown parser consumes.
+
 ### Independent parser
 
 Use this only when the host language or runtime cannot consume the shared core. Run the portable model and rendering corpora, document host parser
@@ -102,3 +109,12 @@ present in offset tests; ASCII-only tests cannot expose the difference.
 The syntax core should not gain host flags to make a port convenient. If an
 integration cannot preserve these semantics, keep the source unchanged and record
 the host limitation until its boundary is understood.
+
+## Shared Showcase
+
+Edit [the shared examples](examples/showcase.json) and run `npm run examples:sync`
+to regenerate the browser demos and the shared sections of the Obsidian showcase
+and Logseq smoke note. Logseq uses one example per block to limit conflicts
+with its highlight syntax. Keep host-specific examples outside the generated
+sections. Use [the conformance fixtures](../fixtures/) for grammar, escaping,
+and source-position assertions.

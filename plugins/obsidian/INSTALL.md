@@ -1,28 +1,29 @@
-# Install in a Test Vault
+# Install in an Obsidian Vault
 
-Build and install the runtime files:
-
-```sh
-npm install
-npm run check
-npm run install:vault -- "/path/to/Vault" --clean --enable --examples
-```
-
-For repeat installs into the same vault, you can also set the vault path once
-per shell:
+From the monorepo root, install dependencies and build the shared core.
 
 ```sh
-export OBSIDIAN_VAULT="/path/to/Vault"
-npm run check
-npm run install:vault -- --clean --enable --examples
+npm ci
+npm run build --workspace packages/markdown-it
+npm run check --workspace plugins/obsidian
 ```
 
-To update the shared core before installing:
+For Plugin Lab, sync the examples into the existing `Inline Annotation`
+folder alongside the plugin build.
 
 ```sh
-npm run update:core
-npm run check
+npm run install:vault --workspace plugins/obsidian -- "/path/to/Plugin Lab" --examples-dir "Inline Annotation"
 ```
+
+For another vault, pass `--examples` to install both notes at its root and
+`--enable` to add the plugin to the community plugin list.
+
+```sh
+npm run install:vault --workspace plugins/obsidian -- "/path/to/Vault" --enable --examples
+```
+
+For repeat installs, set `OBSIDIAN_VAULT` to the target path and omit the
+positional path argument.
 
 The installer copies only:
 

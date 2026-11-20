@@ -1,8 +1,7 @@
 import "@logseq/libs";
+import { observeRubyBlocks } from "./live-render";
 import {
-  hasRuby,
   hasAnyRubyContent,
-  replaceRubyInElement,
   renderMacroRuby,
   anyToMarkup,
   anyToMacro,
@@ -132,9 +131,10 @@ function main() {
 
   async function convertBlocks(
     fn: (content: string) => string,
-    label: string
+    label: string,
+    blockUuid?: string,
   ) {
-    const blocks = await getTargetBlocks();
+    const blocks = blockUuid ? [await logseq.Editor.getBlock(blockUuid)] : await getTargetBlocks();
     let count = 0;
     for (const b of blocks) {
       if (!b?.uuid || typeof b?.content !== "string") continue;
@@ -174,26 +174,19 @@ function main() {
     await convertBlocks(anyToHTML, "→ HTML (one-way)");
   });
 
+  logseq.Editor.registerBlockContextMenuItem("Inline Annotation → Logseq macro", async ({ uuid }) => {
+    if (uuid) await convertBlocks(anyToMacro, "→ macro", uuid);
+  });
+
+  logseq.Editor.registerBlockContextMenuItem("Inline Annotation → Markdown", async ({ uuid }) => {
+    if (uuid) await convertBlocks(anyToMarkup, "→ markup", uuid);
+  });
+
   // ---------------------------------------------------------------------------
   // Live rendering
   // ---------------------------------------------------------------------------
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      for (const added of m.addedNodes) {
-        if (added.nodeType !== Node.ELEMENT_NODE) continue;
-        const el = added as HTMLElement;
-        for (const block of el.querySelectorAll<HTMLElement>("div.block-content")) {
-          if (hasRuby(block.innerHTML)) replaceRubyInElement(block);
-        }
-      }
-    }
-  });
-
-  observer.observe(top!.document.body, { childList: true, subtree: true });
-
-  for (const block of top!.document.querySelectorAll<HTMLElement>("div.block-content")) {
-    replaceRubyInElement(block);
-  }
+  const stopRendering = observeRubyBlocks(top!.document.body);
+  logseq.beforeunload(async () => stopRendering());
 }
 
 logseq.ready(main).catch(console.error);

@@ -1,0 +1,23 @@
+- **Shared showcase**
+  <!-- BEGIN SHARED SHOWCASE -->
+  - 駅前の[図書館]^^(としょかん)で会いましょう。
+  - [漢字]^^(かんじ) and cat^_(/kæt/)
+  - [李太白]^^(Lǐ Tài Bái|ㄌㄧˇ ㄊㄞˋ ㄅㄞˊ)
+  - Frege 把「函數」描述為某種 [不飽和實體]^^(unsaturated entity)：它本身帶有「空位」，需要論元來「補足」才能產生一個完整的值。
+  - Read [重要語句]^^(じゅうようごく|.-) before moving on.
+  - An [important term]^^(..)^_(.~) in context.
+  - The spell [[護]^^(まも)れ]^_(プロテゴ) appears in the text.
+  <!-- END SHARED SHOWCASE -->
+- **Read and edit**
+  - Change [word]^^(reading) and [sound]^_(/a/). Enter the block, edit a reading, and leave the block.
+  - The [term]^_(under)^^(over) appears in a sentence.
+  - An [important term]^^(.-)^_(.~) in context.
+  - `[code]^^(reading)` should stay code beside an [example link](https://example.com).
+- **Convert a block**
+  - Right-click the bullet for the next block and choose **Inline Annotation → Logseq macro**. Use **Inline Annotation → Markdown** to convert it back.
+  - [字]^^(reading)
+  - A longer code span such as ``label with one ` and [skip]^^(code)`` stays verbatim beside [字]^^(reading) when converting the block.
+  - A & B &#38; {{renderer :ruby, 字, left\|right}} after
+- **Compare the host's highlight syntax**
+  - [first]^^(one) and [second]^^(two)
+  - {{renderer :ruby, first, one}} and {{renderer :ruby, second, two}}

@@ -10,10 +10,9 @@ source ranges, canonical HTML, and conformance fixtures remain owned by
 
 ## Status
 
-This remains a local integration pilot tested against Sätteri `0.9.5` (the first
-Cogitatum consumer) and `0.10.5`. It is not published. Plain Markdown is
-supported; MDX is deliberately preserved unchanged until the adapter can use a
-safe literal-insertion contract across the supported Sätteri range.
+The adapter is an unpublished pilot for plain Markdown. Its tests cover
+Sätteri `0.9.5` and `0.10.5`. The packed 0.8.4 adapter has also passed a
+production build in a copy of the Cogitatum site with Sätteri `0.9.5`.
 
 ## Local install
 
@@ -74,7 +73,7 @@ consumer.
   specification requires.
 - Inline code, links, images, raw-HTML islands, and MDX are not claimed by the
   adapter.
-- GFM table cells are not transformed in `0.1.0`; their source ranges include
+- GFM table cells retain their original content. Their source ranges include
   row delimiters and require a separate inline-container strategy.
 
 These are host policies, not alternate grammar. Add portable behavior to the

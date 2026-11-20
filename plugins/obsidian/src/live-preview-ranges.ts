@@ -8,6 +8,7 @@ import {
   mergeSourceRanges,
   type SourceRange,
 } from "./live-preview-host-syntax";
+import { excludeModelsStartingInReferences, projectMarkdownText, type CharacterReference } from "./markdown-source";
 import { OBSIDIAN_RENDER_OPTIONS } from "./render-options";
 
 export interface TextSelectionRange {
@@ -54,7 +55,12 @@ function collectAnnotationRanges(
   hostSkipRanges: readonly SourceRange[]
 ): InlineAnnotationLivePreviewRange[] {
   const ranges: InlineAnnotationLivePreviewRange[] = [];
-  const models = findInlineAnnotationModels(text, segmentStart, segmentEnd, options);
+  const references: CharacterReference[] = [];
+  if (text.includes("&")) projectMarkdownText(text, references);
+  const models = excludeModelsStartingInReferences(
+    findInlineAnnotationModels(text, segmentStart, segmentEnd, options),
+    references,
+  );
 
   for (const model of models) {
     if (isContainedByHostRange(model, hostSkipRanges)) continue;

@@ -1,45 +1,24 @@
+import { rmSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
+import { run } from "../../../scripts/lib.mjs";
 import { syncPackageSpec } from "../../../scripts/spec.mjs";
+
+const cwd = fileURLToPath(new URL("../", import.meta.url));
+const tsc = fileURLToPath(import.meta.resolve("typescript/bin/tsc"));
+
 syncPackageSpec();
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import ts from "typescript";
+rmSync(new URL("../dist/", import.meta.url), { recursive: true, force: true });
 
-const files = ["core", "index"];
+run(process.execPath, [tsc, "--module", "commonjs"], { cwd });
 
-rmSync("dist", { recursive: true, force: true });
-mkdirSync("dist", { recursive: true });
-
-const declarations = spawnSync(
-  process.platform === "win32" ? "npx.cmd" : "npx",
-  ["tsc", "--emitDeclarationOnly", "--declaration", "--declarationDir", "dist"],
-  { stdio: "inherit" }
-);
-
-if (declarations.status !== 0) {
-  process.exit(declarations.status ?? 1);
-}
-
-for (const file of files) {
-  const source = readFileSync(`src/${file}.ts`, "utf8");
-
-  const cjs = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.CommonJS,
-      esModuleInterop: true,
-    },
-    fileName: `${file}.ts`,
-  }).outputText;
-  writeFileSync(`dist/${file}.js`, cjs);
-
-  let esm = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ES2020,
-      esModuleInterop: true,
-    },
-    fileName: `${file}.ts`,
-  }).outputText;
-  esm = esm.replace(/from "\.\/core"/g, 'from "./core.mjs"');
-  writeFileSync(`dist/${file}.mjs`, esm);
-}
+// The playground and SilverBullet load core.mjs as a standalone browser module.
+await build({
+  absWorkingDir: cwd,
+  entryPoints: ["src/core.ts", "src/dom.ts", "src/index.ts"],
+  bundle: true,
+  format: "esm",
+  target: "es2020",
+  outdir: "dist",
+  outExtension: { ".js": ".mjs" },
+});
