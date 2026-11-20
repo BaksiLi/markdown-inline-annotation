@@ -125,8 +125,8 @@ deliberate standard DOM use for owning-document fragments, or CSS
 
 Use the root npm workspace and lockfile. Change the syntax contract and shared
 corpus at the root, then update the integrations in the same change. Work on a
-short-lived branch, let CI and (for Obsidian-facing changes) the directory's
-**Review branch** preview run, merge to `main`, then tag.
+short-lived branch, wait for CI including the Obsidian scanner checks, merge
+to `main`, then tag.
 
 `npm run release:prepare -- patch|minor|major` synchronizes every version and
 dependency, the Obsidian mirrors, and the lockfile. Review `RELEASE_NOTES.md`,

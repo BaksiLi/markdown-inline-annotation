@@ -1,7 +1,9 @@
 # Releases
 
-Use a short-lived branch for changes. Run CI and, for Obsidian-facing changes,
-the official **Review branch** preview before merging to `main`.
+Use a short-lived branch for changes. CI runs Obsidian's official scanner lint
+alongside the integration and artifact checks. Use **Review branch** in the
+Obsidian directory when investigating a hosted review finding. The directory
+also scans each published release automatically.
 
 ## Prepare and publish
 
@@ -9,8 +11,7 @@ Run from the repository root, on `main` after merging:
 
 ```sh
 npm run release:prepare -- patch
-npm run check
-npm run release:pack
+npm run check -- --pack
 ```
 
 Update `RELEASE_NOTES.md`, review the version and lockfile changes, and commit.
