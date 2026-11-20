@@ -100,11 +100,16 @@ and Marketplace VSIX are byte-for-byte identical to the GitHub release assets.
   use **Inline Annotation (Ruby)**, ID `inline-annotation`, in the canonical
   repository.
 - **Marked directory:** [Known Extensions submission](https://github.com/markedjs/marked/pull/4256).
-- **Logseq SDK advisory:** `@logseq/libs@0.0.17` ships a prebundled
-  `dist/lsplugin.user.js` embedding DOMPurify `2.3.8` and lodash `4.17.21`.
-  Dependency overrides cannot replace that code, and no official SDK release
-  fixes it. Obsidian's bundle does not contain the SDK. This needs a supported
-  SDK upgrade or a separately reviewed, reproducible rebuild.
+
+## Logseq SDK update
+
+The Logseq workspace pins `@logseq/libs@0.3.6`, the official release on npm's
+`next` tag, to pick up the dependency refresh. The plugin ZIP ships the SDK's
+third-party notices and contains DOMPurify `3.4.18`. The workspace's production
+dependency audit returned zero findings after the upgrade on 2026-11-20.
+Block-menu conversion was verified in Logseq `0.10.15` using a temporary graph.
+[Upstream issue](https://github.com/logseq/logseq/issues/13970) ·
+[SDK package](https://www.npmjs.com/package/@logseq/libs/v/0.3.6)
 
 ## Obsidian review
 

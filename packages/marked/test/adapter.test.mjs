@@ -1,24 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRequire } from "node:module";
+import { assertRenderFixture } from "../../../scripts/assert-render-fixture.cjs";
 import { Marked } from "marked";
+import { renderInlineAnnotationsToHtml } from "markdown-it-inline-annotation/core";
 import inlineAnnotation from "marked-inline-annotation";
 
 const require = createRequire(import.meta.url);
 const corpus = require("markdown-it-inline-annotation/fixtures/html-render.json");
 for (const fixture of corpus.cases) {
-  test(fixture.id, () => {
-    const html = new Marked(inlineAnnotation(fixture.options)).parse(fixture.input);
-    for (const part of fixture.contains ?? []) assert.ok(html.includes(part), html);
-    for (const part of fixture.notContains ?? []) assert.ok(!html.includes(part), html);
-    for (const { pattern, count } of fixture.counts ?? []) {
-      assert.equal(html.split(pattern).length - 1, count, html);
-    }
+  test(fixture.id, { skip: fixture.hostSkip?.join(", ") }, () => {
+    assertRenderFixture(new Marked(inlineAnnotation(fixture.options)).parse(fixture.input), fixture);
   });
 }
 
 const md = new Marked(inlineAnnotation());
 const vanilla = new Marked();
+test("renders the shared showcase with the core semantics", () => {
+  const examples = require("../../../docs/examples/showcase.json");
+  for (const source of examples) {
+    assert.equal(md.parseInline(source), renderInlineAnnotationsToHtml(source), source);
+  }
+});
+
 test("preserves Marked-owned source", () => {
   for (const source of [
     "`[x]^^(code)`", "```md\n[x]^^(code)\n```",

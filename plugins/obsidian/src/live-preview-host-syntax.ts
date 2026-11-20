@@ -33,30 +33,19 @@ function isEscaped(text: string, index: number): boolean {
   return backslashes % 2 === 1;
 }
 
-function findClosingBracket(text: string, open: number): number {
-  let depth = 0;
-  for (let pos = open + 1; pos < text.length; pos++) {
-    if (isEscaped(text, pos)) continue;
-    if (text[pos] === "[") depth++;
-    if (text[pos] === "]") {
-      if (depth === 0) return pos;
-      depth--;
+function matchDelimiters(text: string, open: string, close: string): Map<number, number> {
+  const starts: number[] = [];
+  const pairs = new Map<number, number>();
+  for (let pos = 0; pos < text.length; pos++) {
+    const char = text[pos];
+    if ((char !== open && char !== close) || isEscaped(text, pos)) continue;
+    if (char === open) {
+      starts.push(pos);
+    } else if (starts.length) {
+      pairs.set(starts.pop()!, pos);
     }
   }
-  return -1;
-}
-
-function findClosingParen(text: string, open: number): number {
-  let depth = 0;
-  for (let pos = open + 1; pos < text.length; pos++) {
-    if (isEscaped(text, pos)) continue;
-    if (text[pos] === "(") depth++;
-    if (text[pos] === ")") {
-      if (depth === 0) return pos;
-      depth--;
-    }
-  }
-  return -1;
+  return pairs;
 }
 
 function findClosingDelimiter(text: string, open: number, delimiter: string): number {
@@ -69,6 +58,10 @@ function findClosingDelimiter(text: string, open: number, delimiter: string): nu
 
 export function collectFallbackHostMarkdownRanges(text: string): SourceRange[] {
   const ranges: SourceRange[] = [];
+  const canHaveLinks = text.includes("](") || text.includes("][");
+  let brackets: Map<number, number> | undefined;
+  let parens: Map<number, number> | undefined;
+  let wikiClosersExhausted = false;
   let pos = 0;
 
   while (pos < text.length) {
@@ -93,13 +86,14 @@ export function collectFallbackHostMarkdownRanges(text: string): SourceRange[] {
       }
     }
 
-    if (text.startsWith("[[", pos) && !isEscaped(text, pos)) {
+    if (!wikiClosersExhausted && text.startsWith("[[", pos) && !isEscaped(text, pos)) {
       const end = text.indexOf("]]", pos + 2);
       if (end !== -1) {
         ranges.push({ from: pos, to: end + 2 });
         pos = end + 2;
         continue;
       }
+      wikiClosersExhausted = true;
     }
 
     if (text[pos] === "<" && !isEscaped(text, pos)) {
@@ -115,19 +109,21 @@ export function collectFallbackHostMarkdownRanges(text: string): SourceRange[] {
     }
 
     const linkStart = text[pos] === "!" && text[pos + 1] === "[" ? pos + 1 : text[pos] === "[" ? pos : -1;
-    if (linkStart !== -1 && !isEscaped(text, linkStart)) {
-      const labelEnd = findClosingBracket(text, linkStart);
-      if (labelEnd !== -1) {
+    if (canHaveLinks && linkStart !== -1 && !isEscaped(text, linkStart)) {
+      brackets ??= matchDelimiters(text, "[", "]");
+      const labelEnd = brackets.get(linkStart);
+      if (labelEnd !== undefined) {
         if (text[labelEnd + 1] === "(") {
-          const linkEnd = findClosingParen(text, labelEnd + 1);
-          if (linkEnd !== -1) {
+          parens ??= matchDelimiters(text, "(", ")");
+          const linkEnd = parens.get(labelEnd + 1);
+          if (linkEnd !== undefined) {
             ranges.push({ from: pos, to: linkEnd + 1 });
             pos = linkEnd + 1;
             continue;
           }
         } else if (text[labelEnd + 1] === "[") {
-          const referenceEnd = findClosingBracket(text, labelEnd + 1);
-          if (referenceEnd !== -1) {
+          const referenceEnd = brackets.get(labelEnd + 1);
+          if (referenceEnd !== undefined) {
             ranges.push({ from: pos, to: referenceEnd + 1 });
             pos = referenceEnd + 1;
             continue;

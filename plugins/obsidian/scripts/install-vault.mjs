@@ -1,26 +1,36 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
-const args = process.argv.slice(2);
-const clean = args.includes("--clean");
-const enable = args.includes("--enable");
-const examples = args.includes("--examples");
-const targetArg =
-  args.find((arg) => arg !== "--clean" && arg !== "--enable" && arg !== "--examples") ?? process.env.OBSIDIAN_VAULT;
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    clean: { type: "boolean" },
+    enable: { type: "boolean" },
+    examples: { type: "boolean" },
+    "examples-dir": { type: "string" },
+  },
+});
+const { clean, enable, examples, "examples-dir": examplesDir } = values;
+const targetArg = positionals[0] ?? process.env.OBSIDIAN_VAULT;
 
-if (!targetArg) {
+if (!targetArg || positionals.length > 1) {
   console.error(
-    "Usage: npm run install:vault -- <vault path | plugins path | plugin path> [--clean] [--enable] [--examples]"
+    "Usage: npm run install:vault -- <vault path | plugins path | plugin path> [--clean] [--enable] [--examples | --examples-dir <vault-relative path>]"
   );
   process.exit(1);
 }
 
-const sourceRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const sourceRoot = fileURLToPath(new URL("../", import.meta.url));
 const targetRoot = path.resolve(targetArg);
 const pluginDir = resolvePluginDir(targetRoot);
 const vaultDir = resolveVaultDir(pluginDir);
 const files = ["main.js", "manifest.json", "versions.json", "styles.css"];
+const exampleTarget = examples || examplesDir !== undefined
+  ? resolveExamplesDir(vaultDir, examplesDir ?? ".")
+  : undefined;
 
 if (clean && existsSync(pluginDir)) {
   rmSync(pluginDir, { recursive: true, force: true });
@@ -33,11 +43,11 @@ for (const file of files) {
 }
 
 if (enable) enablePlugin(vaultDir);
-if (examples) installExamples(vaultDir);
+if (exampleTarget) installExamples(exampleTarget);
 
 console.log(`Installed ${manifest.id} to ${pluginDir}`);
 if (enable) console.log(`Enabled ${manifest.id} in ${path.join(vaultDir, ".obsidian", "community-plugins.json")}`);
-if (examples) console.log(`Installed examples to ${vaultDir}`);
+if (exampleTarget) console.log(`Installed examples to ${exampleTarget}`);
 
 function resolvePluginDir(target) {
   if (existsSync(path.join(target, "manifest.json"))) return target;
@@ -71,10 +81,18 @@ function enablePlugin(vaultDir) {
   }
 }
 
-function installExamples(vaultDir) {
-  cpSync(path.join(sourceRoot, "examples", "obsidian-smoke.md"), path.join(vaultDir, "inline-annotation smoke.md"));
-  cpSync(
-    path.join(sourceRoot, "examples", "obsidian-showcase.md"),
-    path.join(vaultDir, "inline-annotation showcase.md")
-  );
+function resolveExamplesDir(vaultDir, directory) {
+  const target = path.resolve(vaultDir, directory);
+  const relative = path.relative(vaultDir, target);
+  if (path.isAbsolute(directory) || relative.split(path.sep)[0] === "..") {
+    throw new Error("--examples-dir must be relative to the vault");
+  }
+  return target;
+}
+
+function installExamples(target) {
+  mkdirSync(target, { recursive: true });
+  for (const name of ["smoke", "showcase"]) {
+    cpSync(path.join(sourceRoot, "examples", `obsidian-${name}.md`), path.join(target, `inline-annotation ${name}.md`));
+  }
 }

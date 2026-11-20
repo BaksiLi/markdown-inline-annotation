@@ -1,6 +1,12 @@
+import assert from "node:assert/strict";
 import { cpSync, mkdirSync, readdirSync, rmSync, utimesSync } from "node:fs";
 import { resolve } from "node:path";
 import { capture, npm, readJson, root, run, writeJson } from "./lib.mjs";
+
+const args = process.argv.slice(2);
+assert.ok(args.length === 0 || (args.length === 1 && args[0] === "--built"), "Expected --built or no arguments");
+if (!args.length) run(process.execPath, ["scripts/tasks.mjs", "build"]);
+run(process.execPath, ["scripts/build-examples.mjs"], { cwd: resolve(root, "packages/markdown-it") });
 
 const version = readJson("package.json").version;
 const artifacts = resolve(root, "artifacts");
@@ -12,7 +18,7 @@ rmSync(stage, { recursive: true, force: true });
 mkdirSync(artifacts);
 mkdirSync(stage);
 for (const workspace of ["packages/markdown-it", "packages/marked"]) {
-  run(npm, ["pack", "--workspace", workspace, "--pack-destination", artifacts]);
+  run(npm, ["pack", "--workspace", workspace, "--pack-destination", artifacts, "--ignore-scripts"]);
 }
 const core = `markdown-it-inline-annotation-${version}.tgz`;
 

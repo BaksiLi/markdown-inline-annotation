@@ -1,45 +1,20 @@
+import { rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { run } from "../../../scripts/lib.mjs";
 import { syncPackageSpec } from "../../../scripts/spec.mjs";
+
+const cwd = fileURLToPath(new URL("../", import.meta.url));
+const tsc = fileURLToPath(import.meta.resolve("typescript/bin/tsc"));
+
 syncPackageSpec();
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import ts from "typescript";
+rmSync(new URL("../dist/", import.meta.url), { recursive: true, force: true });
 
-const files = ["core", "index"];
+run(process.execPath, [tsc, "--module", "commonjs"], { cwd });
+run(process.execPath, [tsc, "--outDir", "dist/esm", "--declaration", "false"], { cwd });
 
-rmSync("dist", { recursive: true, force: true });
-mkdirSync("dist", { recursive: true });
-
-const declarations = spawnSync(
-  process.platform === "win32" ? "npx.cmd" : "npx",
-  ["tsc", "--emitDeclarationOnly", "--declaration", "--declarationDir", "dist"],
-  { stdio: "inherit" }
-);
-
-if (declarations.status !== 0) {
-  process.exit(declarations.status ?? 1);
-}
-
-for (const file of files) {
-  const source = readFileSync(`src/${file}.ts`, "utf8");
-
-  const cjs = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.CommonJS,
-      esModuleInterop: true,
-    },
-    fileName: `${file}.ts`,
-  }).outputText;
-  writeFileSync(`dist/${file}.js`, cjs);
-
-  let esm = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ES2020,
-      esModuleInterop: true,
-    },
-    fileName: `${file}.ts`,
-  }).outputText;
-  esm = esm.replace(/from "\.\/core"/g, 'from "./core.mjs"');
-  writeFileSync(`dist/${file}.mjs`, esm);
+writeFileSync(new URL("../dist/esm/package.json", import.meta.url), '{"type":"module"}\n');
+// Preserve the original entry filenames, including the playground's browser import.
+for (const entry of ["core", "dom", "index"]) {
+  const defaultExport = entry === "index" ? 'export { default } from "./esm/index.js";\n' : "";
+  writeFileSync(new URL(`../dist/${entry}.mjs`, import.meta.url), `export * from "./esm/${entry}.js";\n${defaultExport}`);
 }

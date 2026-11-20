@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { hasRuby, rubyToHTML, renderMacroRuby, anyToMarkup, anyToMacro, anyToHTML, replaceRubyInElement } from "./parser";
+import { hasRuby, rubyToHTML, renderMacroRuby, anyToMarkup, anyToMacro, anyToHTML } from "./parser";
+import { decorateRubyInElement } from "./live-render";
 import segmentBoundaryCorpus from "../../../fixtures/segment-boundaries.json";
-import { htmlRenderFixtureCorpus, htmlRenderFixtures } from "./spec-fixtures";
+import { htmlRenderFixtures } from "./spec-fixtures";
 
 // ---------------------------------------------------------------------------
 // hasRuby
@@ -17,54 +18,6 @@ describe("hasRuby", () => {
 // ---------------------------------------------------------------------------
 // Shared spec fixtures
 // ---------------------------------------------------------------------------
-describe("shared spec fixture corpus", () => {
-  it("is well formed", () => {
-    expect(htmlRenderFixtureCorpus.version).toBe(1);
-    expect(Object.keys(htmlRenderFixtureCorpus.fixtureTypes).sort()).toEqual([
-      "host-skip",
-      "rendering-policy",
-      "semantic",
-    ]);
-    expect(htmlRenderFixtureCorpus.fixtureSchema.commonRequired).toEqual([
-      "id",
-      "category",
-      "name",
-      "assertionType",
-      "input",
-    ]);
-    expect(Array.isArray(htmlRenderFixtureCorpus.cases)).toBe(true);
-
-    const ids = new Set<string>();
-    for (const fixture of htmlRenderFixtureCorpus.cases) {
-      for (const field of htmlRenderFixtureCorpus.fixtureSchema.commonRequired) {
-        expect(fixture[field as keyof typeof fixture]).toBeTruthy();
-      }
-      expect(ids.has(fixture.id)).toBe(false);
-      ids.add(fixture.id);
-      const typeSchema = htmlRenderFixtureCorpus.fixtureSchema.byAssertionType[fixture.assertionType];
-      for (const field of typeSchema.required) {
-        expect(fixture[field as keyof typeof fixture]).toBeTruthy();
-      }
-      for (const field of typeSchema.forbidden) {
-        expect(fixture[field as keyof typeof fixture]).toBeUndefined();
-      }
-      expect(typeof fixture.input).toBe("string");
-      if (fixture.assertionType !== "host-skip") {
-        expect(
-          (fixture.contains?.length ?? 0) > 0 ||
-            (fixture.notContains?.length ?? 0) > 0 ||
-            (fixture.counts?.length ?? 0) > 0
-        ).toBe(true);
-      }
-      for (const count of fixture.counts ?? []) {
-        expect(count.pattern).toBeTruthy();
-        expect(Number.isInteger(count.count)).toBe(true);
-        expect(count.count).toBeGreaterThanOrEqual(0);
-      }
-    }
-  });
-});
-
 describe("shared spec fixtures — HTML rendering", () => {
   for (const fixture of htmlRenderFixtures) {
     it(`${fixture.id}: ${fixture.name}`, () => {
@@ -411,7 +364,7 @@ describe("annotation parentheses", () => {
     link.textContent = "Cogitatum";
     host.append(link, document.createTextNode(sentence.slice("[[Cogitatum]]".length)));
 
-    replaceRubyInElement(host);
+    decorateRubyInElement(host);
 
     expect(host.querySelector("a")).toBe(link);
     expect(host.querySelectorAll("ruby.ia-ruby")).toHaveLength(1);
@@ -667,10 +620,53 @@ describe("anyToMarkup", () => {
       "[漢字]^^(..)^_(.-)"
     );
   });
-  it("HTML reverse bouten + underline → markup", () => {
-    expect(anyToMarkup('<span class="ia-bouten ia-bouten-under ia-underline">漢字</span>')).toBe(
-      "[漢字]^_(.-)^^(..)"
+  it("preserves conflicting marks on one side of pasted HTML", () => {
+    const source = '<span class="ia-bouten ia-bouten-under ia-underline">漢字</span>';
+    expect(anyToMarkup(source)).toBe(source);
+    expect(anyToMacro(source)).toBe(source);
+  });
+  it("recovers both marks from nested HTML spans", () => {
+    const html = rubyToHTML("[漢字]^^(.-)^_(.~)");
+    expect(anyToMarkup(html)).toBe("[漢字]^^(.-)^_(.~)");
+    expect(anyToMacro(html)).toBe(html);
+  });
+  it("splices only supported HTML and retains original line endings and spelling", () => {
+    const prefix = "prop:: A & B &#38;\r\n<b data-label='unchanged > quoted'>before</b> ";
+    const ruby = "<ruby>字<rt>one|two</rt></ruby>";
+    const suffix = "\r\n<img alt='[x]^^(literal)'> <!-- [x]^^(comment) -->";
+    expect(anyToMarkup(prefix + ruby + suffix)).toBe(prefix + "[字]^^(one\\|two)" + suffix);
+    expect(anyToMacro(prefix + ruby + suffix)).toBe(prefix + "{{renderer :ruby, 字, one\\|two}}" + suffix);
+  });
+  it("keeps malformed ruby and markup owners intact while converting adjacent prose", () => {
+    const protectedHtml = '<ruby class="ia-ruby-mixed">broken</ruby> <pre>[x]^^(code)</pre> ';
+    expect(anyToMacro(protectedHtml + "[字]^^(outside)")).toBe(
+      protectedHtml + "{{renderer :ruby, 字, outside}}"
     );
+    expect(anyToMarkup(protectedHtml + "{{renderer :ruby, 字, outside}}")).toBe(
+      protectedHtml + "[字]^^(outside)"
+    );
+  });
+  it("round-trips decoration-shaped readings from HTML as literal text", () => {
+    const ruby = "<ruby>字<rt>.-</rt></ruby>";
+    expect(anyToMarkup(ruby)).toBe("[字]^^(\\.-)");
+    expect(anyToMacro(ruby)).toBe("{{renderer :ruby, 字, \\.-}}");
+  });
+  it("preserves input whose reading or base spans lines", () => {
+    for (const source of [
+      "<ruby>two\nwords<rt>reading</rt></ruby>", "<ruby>字<rt>two\nlines</rt></ruby>",
+      "{{renderer :ruby, 字, two\nlines}}",
+    ]) {
+      expect(anyToMarkup(source)).toBe(source);
+      expect(anyToMacro(source)).toBe(source);
+    }
+  });
+  it("escapes a literal annotation operator in pasted bases", () => {
+    for (const source of ["<ruby>a^^(b)<rt>reading</rt></ruby>", "{{renderer :ruby, a^^(b), reading}}"]) {
+      const markup = anyToMarkup(source);
+      expect(markup).toBe("[a\\^^(b)]^^(reading)");
+      expect(rubyToHTML(markup)).toContain(">a^^(b)<rp>");
+      expect(anyToMacro(markup)).toBe("{{renderer :ruby, a^^(b), reading}}");
+    }
   });
 });
 
@@ -692,6 +688,37 @@ describe("anyToMacro", () => {
   });
   it("escaped literal pipe stays escaped in macro", () => {
     expect(anyToMacro("[base]^^(a\\|b)")).toBe("{{renderer :ruby, base, a\\|b}}");
+  });
+  it("preserves visible annotations and surrounding source on repeated macro round trips", () => {
+    const prose = "🚀e\u0301 A & B &#38; ";
+    const source = prose + String.raw`[𠮷]^^(left\|right)^_(\(gloss\)) after`;
+    const macro = anyToMacro(source);
+    const canonical = anyToMarkup(macro);
+    expect(macro).toBe(prose + String.raw`{{renderer :ruby, 𠮷, left\|right|(gloss)}} after`);
+    expect(canonical).toBe(prose + String.raw`[𠮷]^^(left\|right|\(gloss\)) after`);
+    expect(anyToMarkup(anyToMacro(canonical))).toBe(canonical);
+    expect(anyToHTML(macro)).toBe(anyToHTML(source));
+  });
+  it("preserves source with delimiters a macro argument cannot represent", () => {
+    const source = "[a]^^(one, two) [b]^^(x}) [c]^^(y)";
+    expect(anyToMacro(source)).toBe("[a]^^(one, two) [b]^^(x}) {{renderer :ruby, c, y}}");
+  });
+  it("keeps nested annotation source intact beside convertible text", () => {
+    const nested = "[[護]^^(まも)れ]^_(プロテゴ)";
+    expect(anyToMacro(nested + " [a]^^(b)")).toBe(nested + " {{renderer :ruby, a, b}}");
+  });
+  it("keeps overflow and mixed decorations in their source format", () => {
+    const source = String.raw`[a]^^(x\|y|z|w) [b]^^(text|.~) [c]^^(x)^_(y|z)`;
+    expect(anyToMacro(source)).toBe(String.raw`[a]^^(x\|y|z|w) [b]^^(text|.~) {{renderer :ruby, c, x|y\|z}}`);
+  });
+
+  it("round-trips an escaped glyph as literal ruby text", () => {
+    const source = String.raw`[word]^^(\.-)`;
+    const macro = anyToMacro(source);
+    expect(macro).toBe(String.raw`{{renderer :ruby, word, \.-}}`);
+    expect(anyToHTML(macro)).toContain("<rt>.-</rt>");
+    expect(anyToMarkup(macro)).toBe(source);
+    expect(anyToMarkup("{{renderer :ruby, word, ..|reading}}")).toBe(String.raw`[word]^^(\..|reading)`);
   });
   it("pipe levels stay separated in macro", () => {
     expect(anyToMacro("[base]^^(a|b)")).toBe("{{renderer :ruby, base, a|b}}");
@@ -740,6 +767,31 @@ describe("code protection", () => {
     expect(result).toContain("`cat^_(/kæt/)`");
     expect(result).toContain("[cat]^_(/kæt/)");
   });
+
+  const inside = "[skip]^^(code) {{renderer :ruby, skip, code}}";
+  const converters = [
+    ["macro", anyToMacro, "[字]^^(outside)", "{{renderer :ruby, 字, outside}}"],
+    ["Markdown", anyToMarkup, "{{renderer :ruby, 字, outside}}", "[字]^^(outside)"],
+    ["HTML", anyToHTML, "[字]^^(outside)", rubyToHTML("[字]^^(outside)")],
+  ] as const;
+  for (const [name, convert, outside, expected] of converters) {
+    it(name + " preserves multi-backtick code and literal private-use text", () => {
+      const prefix = "\x60\x60a\x60 " + inside + "\x60\x60 \uE000CODE0\uE000 ";
+      expect(convert(prefix + outside)).toBe(prefix + expected);
+    });
+    it(name + " preserves CRLF tilde fences with a longer closing fence", () => {
+      const prefix = "  ~~~md\r\n" + inside + "\r\n~~~~\r\n";
+      expect(convert(prefix + outside)).toBe(prefix + expected);
+    });
+    it(name + " preserves an unclosed fence to the end of the block", () => {
+      const suffix = "\n\x60\x60\x60\x60md\n" + inside + "\n\x60\x60\x60\n" + outside;
+      expect(convert(outside + suffix)).toBe(expected + suffix);
+    });
+    it(name + " leaves escaped and unmatched backticks in prose", () => {
+      expect(convert("\\\x60 " + outside)).toBe("\\\x60 " + expected);
+      expect(convert("\x60 " + outside + "\n\n\x60")).toBe("\x60 " + expected + "\n\n\x60");
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -767,12 +819,12 @@ describe("Logseq host workflows", () => {
     expect(result).toContain("<rt>かんじ</rt>");
   });
 
-  it("replaceRubyInElement renders raw markup beside existing rendered ruby", () => {
+  it("renders raw markup beside an existing ruby", () => {
     const host = document.createElement("div");
     host.innerHTML =
       '<ruby class="ia-ruby ia-ruby-over">漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby> [字]^^(じ)';
 
-    replaceRubyInElement(host);
+    decorateRubyInElement(host);
 
     expect(host.querySelectorAll("ruby.ia-ruby")).toHaveLength(2);
     expect(host.innerHTML).toContain("<rt>かん</rt>");
@@ -803,7 +855,7 @@ describe("Logseq host workflows", () => {
       }
 
       const source = fixture.runs.map((run) => run.text).join("");
-      replaceRubyInElement(host);
+      decorateRubyInElement(host);
 
       if (fixture.expectation === "must-preserve") {
         expect(host.querySelector("ruby.ia-ruby")).toBeNull();

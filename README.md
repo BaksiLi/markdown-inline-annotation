@@ -143,8 +143,12 @@ npm run check
 npm run release:pack
 ```
 
-`check` runs all five integrations and package checks. `release:pack` then creates and
-verifies both npm tarballs, Logseq ZIP, Obsidian assets, VSIX, and checksums in `artifacts/`.
+`check` runs the test lint, workspace tests, and package checks. The test lint
+checks for fixed waits in tests and hooks. Await the operation or a completion
+signal, or advance a fake clock when testing timer behavior.
+
+`release:pack` then creates and verifies both npm tarballs, Logseq ZIP, Obsidian
+assets, VSIX, and checksums in `artifacts/`.
 It needs `zip` and `unzip`, available on macOS and the Linux CI runner.
 
 Run a single integration with `npm run test --workspace plugins/logseq`, for example.

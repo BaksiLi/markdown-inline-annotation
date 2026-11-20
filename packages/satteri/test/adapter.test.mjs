@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { assertRenderFixture } from "../../../scripts/assert-render-fixture.cjs";
 import { markdownToHtml, mdxToJs } from "satteri";
+import { renderInlineAnnotationsToHtml } from "markdown-it-inline-annotation/core";
 import satteriInlineAnnotation from "../dist/index.js";
 
 const require = createRequire(import.meta.url);
@@ -22,35 +24,17 @@ function countOccurrences(text, pattern) {
   return count;
 }
 
-test("runs the shared host-neutral rendering corpus", () => {
-  let fixturesRun = 0;
-  let fixturesSkipped = 0;
+for (const fixture of fixtureCorpus.cases) {
+  test(fixture.id, { skip: fixture.hostSkip?.join(", ") }, () => {
+    assertRenderFixture(render(fixture.input, fixture.options), fixture);
+  });
+}
 
-  for (const fixture of fixtureCorpus.cases) {
-    if (fixture.assertionType === "host-skip") {
-      fixturesSkipped++;
-      continue;
-    }
-
-    const html = render(fixture.input, fixture.options ?? {});
-    for (const part of fixture.contains ?? []) {
-      assert.ok(html.includes(part), `${fixture.id} missing ${part} in ${html}`);
-    }
-    for (const part of fixture.notContains ?? []) {
-      assert.ok(!html.includes(part), `${fixture.id} unexpectedly includes ${part} in ${html}`);
-    }
-    for (const expected of fixture.counts ?? []) {
-      assert.equal(
-        countOccurrences(html, expected.pattern),
-        expected.count,
-        `${fixture.id} expected ${expected.pattern} count ${expected.count} in ${html}`
-      );
-    }
-    fixturesRun++;
+test("renders the shared showcase with the core semantics", () => {
+  const examples = require("../../../docs/examples/showcase.json");
+  for (const source of examples) {
+    assert.equal(render(source).trim(), `<p>${renderInlineAnnotationsToHtml(source)}</p>`, source);
   }
-
-  assert.ok(fixturesRun > 0);
-  assert.equal(fixturesRun + fixturesSkipped, fixtureCorpus.cases.length);
 });
 
 test("recognizes chained slots before Satteri can treat ^_ as emphasis", () => {
@@ -105,6 +89,30 @@ test("normalizes Satteri positions before slicing JavaScript source", () => {
   assert.ok(html.includes("🧠 prefix <ruby"));
   assert.ok(html.includes("<rt>かんじ</rt>"));
   assert.ok(html.includes("</ruby> suffix"));
+});
+
+test("preserves link and code boundaries after a long mixed-encoding prefix", () => {
+  const prefix = "ASCII ".repeat(512) + "𠮷 e\u0301 🙂 ";
+  const source = prefix + "[link [x]^^(label)](/dest) `𠮷^^(code)` [𠮷]^^(reading)";
+  const html = render(source);
+  assert.ok(html.startsWith("<p>" + prefix));
+  assert.ok(html.includes('<a href="/dest">link [x]^^(label)</a>'));
+  assert.ok(html.includes("<code>𠮷^^(code)</code>"));
+  assert.equal(countOccurrences(html, "<ruby"), 1);
+  assert.ok(html.includes("<rt>reading</rt>"));
+});
+
+test("maps Satteri child positions independently of paragraph positions", () => {
+  const read = "𠮷 e\u0301 🙂 [link [x]^^(label)](/dest) `𠮷^^(code)` [𠮷]^^(reading)";
+  for (const separator of ["\n\n", "\r\n\r\n"]) {
+    const source = "Title 😀 [x]^^(title)" + separator + read;
+    const html = render(source);
+    assert.ok(html.includes("<rt>title</rt>"));
+    assert.ok(html.includes('<a href="/dest">link [x]^^(label)</a>'));
+    assert.ok(html.includes("<code>𠮷^^(code)</code>"));
+    assert.equal(countOccurrences(html, "<ruby"), 2);
+    assert.ok(html.includes("<rt>reading</rt>"));
+  }
 });
 
 test("leaves MDX unchanged until literal inserted-HTML semantics are available", () => {

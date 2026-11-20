@@ -1,5 +1,6 @@
 import {
   findInlineAnnotationModels,
+  hasInlineAnnotation,
   renderInlineAnnotationModelToHtml,
   type InlineAnnotationOptions,
 } from "markdown-it-inline-annotation/core";
@@ -59,7 +60,8 @@ interface CompileState {
   markerPrefix: string;
   nextMarkerId: number;
   htmlByMarker: Map<string, string>;
-  jsIndexBySourceOffset: number[];
+  jsIndexByByteOffset: number[];
+  jsIndexByScalarOffset: number[];
   lineStartJsIndexes: number[];
   source: string;
   sourceOffsetEncoding: "utf8" | "utf16" | undefined;
@@ -93,10 +95,16 @@ function jsIndexAtScalarColumn(source: string, lineStart: number, columnOffset: 
 }
 
 function jsIndexForPoint(point: SourcePoint, state: CompileState): number {
+  if (state.sourceOffsetEncoding === "utf16") return point.offset;
+  const mappedSourceOffset = state.jsIndexByByteOffset[point.offset];
+  if (state.sourceOffsetEncoding === "utf8" && mappedSourceOffset !== undefined) return mappedSourceOffset;
+  // ASCII positions agree in both coordinate systems. Resolve the encoding
+  // only when the byte map and the reported offset disagree.
+  if (mappedSourceOffset === point.offset) return point.offset;
+
   const lineStart = state.lineStartJsIndexes[point.line - 1] ?? 0;
   const utf16PointIndex = lineStart + point.column - 1;
   const utf8PointIndex = jsIndexAtScalarColumn(state.source, lineStart, point.column - 1);
-  const mappedSourceOffset = state.jsIndexBySourceOffset[point.offset];
   const matchesUtf16 = point.offset === utf16PointIndex;
   const matchesUtf8 = mappedSourceOffset === utf8PointIndex;
 
@@ -107,12 +115,11 @@ function jsIndexForPoint(point: SourcePoint, state: CompileState): number {
 
   if (state.sourceOffsetEncoding === "utf8") return mappedSourceOffset ?? utf8PointIndex;
   if (state.sourceOffsetEncoding === "utf16") return point.offset;
-  if (mappedSourceOffset === point.offset) return point.offset;
   if (matchesUtf8) return mappedSourceOffset;
   return point.offset;
 }
 
-function sourceRangeOf(node: Readonly<MdastNode>, state: CompileState): SourceRange | null {
+function sourceRangeOf(node: Readonly<MdastNode>, state: CompileState, child = false): SourceRange | null {
   const start = node.position?.start;
   const end = node.position?.end;
   if (
@@ -124,6 +131,13 @@ function sourceRangeOf(node: Readonly<MdastNode>, state: CompileState): SourceRa
     end.column === undefined
   ) {
     return null;
+  }
+  // Satteri 0.9 supplies bytes for the visited node but scalar offsets in
+  // its child snapshots. Newer versions expose UTF-16 on both surfaces.
+  if (child && state.sourceOffsetEncoding === "utf8") {
+    const from = state.jsIndexByScalarOffset[start.offset];
+    const to = state.jsIndexByScalarOffset[end.offset];
+    return from !== undefined && to !== undefined ? { start: from, end: to } : null;
   }
   return {
     start: jsIndexForPoint({ offset: start.offset, line: start.line, column: start.column }, state),
@@ -138,10 +152,13 @@ function collectHostOwnedRanges(
   state: CompileState
 ): void {
   for (const child of childrenOf(node)) {
-    const range = sourceRangeOf(child, state);
-    if (range && HOST_OWNED_NODE_TYPES.has(child.type)) {
-      ranges.push(range);
-      if (child.type === "html") htmlTokens.push({ ...range, value: child.value });
+    if (HOST_OWNED_NODE_TYPES.has(child.type)) {
+      const range = sourceRangeOf(child, state, true);
+      if (range) {
+        ranges.push(range);
+        if (child.type === "html") htmlTokens.push({ ...range, value: child.value });
+        continue;
+      }
     }
     collectHostOwnedRanges(child, ranges, htmlTokens, state);
   }
@@ -200,7 +217,8 @@ function createCompileState(source: string): CompileState {
   // Satteri 0.9 position-enabled visitors expose UTF-8 byte offsets, while
   // 0.10 exposes JavaScript UTF-16 offsets. Keep both maps and use line/column
   // consistency to select the correct interpretation for this compile.
-  const jsIndexBySourceOffset: number[] = [0];
+  const jsIndexByByteOffset: number[] = [0];
+  const jsIndexByScalarOffset = [0];
   const lineStartJsIndexes = [0];
   let jsIndex = 0;
   let sourceOffset = 0;
@@ -208,7 +226,8 @@ function createCompileState(source: string): CompileState {
     const codePoint = character.codePointAt(0) ?? 0;
     sourceOffset += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
     jsIndex += character.length;
-    jsIndexBySourceOffset[sourceOffset] = jsIndex;
+    jsIndexByByteOffset[sourceOffset] = jsIndex;
+    jsIndexByScalarOffset.push(jsIndex);
     if (character === "\n") lineStartJsIndexes.push(jsIndex);
   }
 
@@ -216,7 +235,8 @@ function createCompileState(source: string): CompileState {
     markerPrefix,
     nextMarkerId: 0,
     htmlByMarker: new Map(),
-    jsIndexBySourceOffset,
+    jsIndexByByteOffset,
+    jsIndexByScalarOffset,
     lineStartJsIndexes,
     source,
     sourceOffsetEncoding: undefined,
@@ -226,11 +246,11 @@ function createCompileState(source: string): CompileState {
 function compileStateFor(
   context: MdastVisitorContext,
   stateKey: symbol
-): CompileState {
+): CompileState | null {
   const data = context.data as unknown as Record<PropertyKey, unknown>;
-  const existing = data[stateKey];
-  if (existing) return existing as CompileState;
-  const state = createCompileState(context.source);
+  const existing = data[stateKey] as CompileState | null | undefined;
+  if (existing !== undefined) return existing;
+  const state = hasInlineAnnotation(context.source) ? createCompileState(context.source) : null;
   data[stateKey] = state;
   return state;
 }
@@ -252,6 +272,7 @@ function replaceAnnotationsInParent(
   if (context.sourceFormat !== "markdown") return undefined;
 
   const state = compileStateFor(context, stateKey);
+  if (!state) return undefined;
   const parentRange = sourceRangeOf(node, state);
   if (!parentRange) return undefined;
 
@@ -286,9 +307,9 @@ function replaceAnnotationsInParent(
   return { raw: transformed };
 }
 
-function stateFromHastContext(context: HastVisitorContext, stateKey: symbol): CompileState | undefined {
+function stateFromHastContext(context: HastVisitorContext, stateKey: symbol): CompileState | null | undefined {
   const data = context.data as unknown as Record<PropertyKey, unknown>;
-  return data[stateKey] as CompileState | undefined;
+  return data[stateKey] as CompileState | null | undefined;
 }
 
 function restoreAnnotationsInText(

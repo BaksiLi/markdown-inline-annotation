@@ -1,9 +1,6 @@
-import {
-  findInlineAnnotation,
-  findInlineAnnotationModels,
-  type InlineAnnotationModel,
-} from "markdown-it-inline-annotation/core";
-import { renderInlineAnnotationModelToFragment, renderInlineAnnotationsToFragment } from "./render-dom";
+import { findInlineAnnotationModels, hasInlineAnnotation, type InlineAnnotationModel } from "markdown-it-inline-annotation/core";
+import { excludeModelsStartingInReferences, projectMarkdownText, type CharacterReference } from "./markdown-source";
+import { renderAnnotation } from "./render-dom";
 import { OBSIDIAN_RENDER_OPTIONS } from "./render-options";
 
 const SKIP_TAGS = new Set(["A", "CODE", "PRE", "RUBY", "SCRIPT", "STYLE", "TEXTAREA"]);
@@ -12,147 +9,147 @@ export interface InlineAnnotationRenderStats {
   replacements: number;
 }
 
-export function renderInlineAnnotationsInElement(root: HTMLElement): InlineAnnotationRenderStats {
-  let replacements = 0;
-  const document = root.ownerDocument;
-  const nodeFilter = document.defaultView?.NodeFilter ?? NodeFilter;
-  const walker = document.createTreeWalker(root, nodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      if (!node.nodeValue || !findInlineAnnotation(node.nodeValue, 0, node.nodeValue.length, OBSIDIAN_RENDER_OPTIONS)) {
-        return nodeFilter.FILTER_REJECT;
-      }
-      const parent = node.parentElement;
-      if (!parent || shouldSkipElement(parent, root)) return nodeFilter.FILTER_REJECT;
-      return nodeFilter.FILTER_ACCEPT;
-    },
-  });
-
-  const textNodes: Text[] = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
-
-  for (const node of textNodes) {
-    replaceTextNode(node);
-    replacements++;
-  }
-
-  replacements += replaceFragmentedAnnotations(root);
-  return { replacements };
+function isSkipped(element: Element): boolean {
+  return SKIP_TAGS.has(element.tagName) || element.hasAttribute("data-inline-annotation-ignore");
 }
 
-function shouldSkipElement(element: Element, root: Element): boolean {
-  for (let current: Element | null = element; current; current = current.parentElement) {
-    if (SKIP_TAGS.has(current.tagName)) return true;
-    if (current.hasAttribute("data-inline-annotation-ignore")) return true;
-    if (current === root) return false;
-  }
-  return false;
+function isTransparent(element: Element): boolean {
+  return element.tagName === "SPAN" && element.attributes.length === 0;
 }
 
-function replaceTextNode(node: Text): void {
-  node.replaceWith(renderInlineAnnotationsToFragment(node.nodeValue ?? "", node.ownerDocument, OBSIDIAN_RENDER_OPTIONS));
+function findModels(source: string) {
+  return findInlineAnnotationModels(source, 0, source.length, OBSIDIAN_RENDER_OPTIONS);
+}
+
+function renderSource(
+  source: string,
+  models: InlineAnnotationModel[],
+  document: Document,
+  decodeText: (source: string) => string = (text) => text,
+): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  let end = 0;
+  for (const model of models) {
+    if (end < model.start) fragment.append(decodeText(source.slice(end, model.start)));
+    fragment.append(renderAnnotation(model, document));
+    end = model.end;
+  }
+  if (end < source.length) fragment.append(decodeText(source.slice(end)));
+  return fragment;
+}
+
+function replaceTextNode(node: Text): ChildNode[] | null {
+  const source = node.data;
+  const models = findModels(source);
+  if (!models.length) return null;
+
+  const fragment = renderSource(source, models, node.ownerDocument);
+  const rendered = Array.from(fragment.childNodes);
+  node.replaceWith(fragment);
+  return rendered;
+}
+
+function renderSourceParagraph(root: HTMLElement, source: string): number | undefined {
+  const paragraph = root.tagName === "P" ? root : root.firstElementChild;
+  if (paragraph?.tagName !== "P" || paragraph.childElementCount > 0 || isSkipped(paragraph)) return;
+  if (paragraph !== root && (root.childNodes.length !== 1 || root.firstChild !== paragraph)) return;
+
+  // Match the source projection exactly before using it to interpret a plain
+  // paragraph. Rich inline markup stays on the DOM path to preserve its owners.
+  const raw = source.trim();
+  const document = paragraph.ownerDocument;
+  const references: CharacterReference[] = [];
+  const text = projectMarkdownText(raw, references);
+  if (text === raw || text !== paragraph.textContent) return;
+  const models = excludeModelsStartingInReferences(findModels(raw), references);
+  if (!models.length) return 0;
+  paragraph.replaceChildren(renderSource(raw, models, document, projectMarkdownText));
+  return 1;
 }
 
 interface TextRun {
   node: Text;
   start: number;
   end: number;
-  coalescible: boolean;
 }
 
-function replaceFragmentedAnnotations(root: HTMLElement): number {
+function replaceFragmentedAnnotations(nodes: Text[]): number {
+  if (nodes.length < 2) return 0;
+  const runs: TextRun[] = [];
+  let source = "";
+  for (const node of nodes) {
+    const start = source.length;
+    source += node.data;
+    runs.push({ node, start, end: source.length });
+  }
+
+  const matches = [];
+  let first = 0;
+  let last = 0;
+  for (const model of findModels(source)) {
+    while (runs[first].end <= model.start) first++;
+    last = Math.max(last, first);
+    while (runs[last].end < model.end) last++;
+    if (first !== last) matches.push({ model, start: runs[first], end: runs[last] });
+  }
+
+  // Applying ranges right to left keeps the preceding text offsets valid.
+  const document = nodes[0].ownerDocument;
+  for (const { model, start, end } of matches.reverse()) {
+    const range = document.createRange();
+    range.setStart(start.node, model.start - start.start);
+    range.setEnd(end.node, model.end - end.start);
+    range.deleteContents();
+    range.insertNode(renderAnnotation(model, document));
+  }
+  return matches.length;
+}
+
+function renderContainer(container: Element): number {
+  if (isSkipped(container)) return 0;
+
   let replacements = 0;
-  while (replaceOneFragmentedAnnotation(root)) replacements++;
-  return replacements;
-}
+  let runs: Text[] = [];
+  function flush(): void {
+    replacements += replaceFragmentedAnnotations(runs);
+    runs = [];
+  }
 
-function replaceOneFragmentedAnnotation(root: HTMLElement): boolean {
-  const document = root.ownerDocument;
-  const nodeFilter = document.defaultView?.NodeFilter ?? NodeFilter;
-  const walker = document.createTreeWalker(root, nodeFilter.SHOW_TEXT);
-
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    const text = node.nodeValue ?? "";
-    if (!text.includes("^^(") && !text.includes("^_(")) continue;
-    if (!node.parentElement || shouldSkipElement(node.parentElement, root)) continue;
-
-    for (let container: Element | null = node.parentElement; container; container = container.parentElement) {
-      if (shouldSkipElement(container, root)) break;
-      const match = findFragmentedMatch(container, root);
-      if (!match) continue;
-      replaceTextRange(container, match);
-      return true;
+  function visit(node: Node): void {
+    if (node.nodeType === node.TEXT_NODE) {
+      const text = node as Text;
+      if (!text.length) return;
+      // Existing complete expressions in one text node take precedence.
+      const rendered = hasInlineAnnotation(text.data) ? replaceTextNode(text) : null;
+      if (!rendered) {
+        runs.push(text);
+        return;
+      }
+      replacements++;
+      for (const child of rendered) {
+        if (child.nodeType === child.TEXT_NODE) runs.push(child as Text);
+        else flush();
+      }
+    } else if (node.nodeType === node.ELEMENT_NODE) {
+      const element = node as Element;
+      if (isTransparent(element)) {
+        for (const child of Array.from(element.childNodes)) visit(child);
+      } else {
+        flush();
+        replacements += renderContainer(element);
+      }
     }
   }
 
-  return false;
+  for (const child of Array.from(container.childNodes)) visit(child);
+  flush();
+  return replacements;
 }
 
-function findFragmentedMatch(container: Element, root: HTMLElement): { runs: TextRun[]; model: InlineAnnotationModel } | null {
-  const runs = collectTextRuns(container, root);
-  const text = runs.map((run) => run.node.nodeValue ?? "").join("");
-  const models = findInlineAnnotationModels(text, 0, text.length, OBSIDIAN_RENDER_OPTIONS);
-
-  for (const model of models) {
-    const touchedRuns = runs.filter((run) => run.end > model.start && run.start < model.end);
-    if (touchedRuns.length <= 1) continue;
-    if (touchedRuns.some((run) => !run.coalescible)) continue;
-    return { runs, model };
+export function renderInlineAnnotationsInElement(root: HTMLElement, sectionSource?: string): InlineAnnotationRenderStats {
+  if (sectionSource && !isSkipped(root)) {
+    const replacements = renderSourceParagraph(root, sectionSource);
+    if (replacements !== undefined) return { replacements };
   }
-
-  return null;
-}
-
-function isTransparentWrapper(element: Element): boolean {
-  return element.tagName === "SPAN" && element.attributes.length === 0;
-}
-
-function canCoalesceTextRun(node: Text, container: Element, root: HTMLElement): boolean {
-  for (let current = node.parentElement; current && current !== container; current = current.parentElement) {
-    if (shouldSkipElement(current, root) || !isTransparentWrapper(current)) return false;
-  }
-  return Boolean(node.parentElement && !shouldSkipElement(container, root));
-}
-
-function collectTextRuns(container: Element, root: HTMLElement): TextRun[] {
-  const document = container.ownerDocument;
-  const nodeFilter = document.defaultView?.NodeFilter ?? NodeFilter;
-  const walker = document.createTreeWalker(container, nodeFilter.SHOW_TEXT);
-  const runs: TextRun[] = [];
-  let offset = 0;
-
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    const text = node.nodeValue ?? "";
-    runs.push({
-      node,
-      start: offset,
-      end: offset + text.length,
-      coalescible: canCoalesceTextRun(node, container, root),
-    });
-    offset += text.length;
-  }
-
-  return runs;
-}
-
-function findRunAt(runs: TextRun[], offset: number, side: "start" | "end"): { run: TextRun; offset: number } | null {
-  for (const run of runs) {
-    if (offset > run.start && offset < run.end) return { run, offset: offset - run.start };
-    if (side === "start" && offset === run.start) return { run, offset: 0 };
-    if (side === "end" && offset === run.end) return { run, offset: run.end - run.start };
-  }
-  return null;
-}
-
-function replaceTextRange(container: Element, match: { runs: TextRun[]; model: InlineAnnotationModel }): void {
-  const start = findRunAt(match.runs, match.model.start, "start");
-  const end = findRunAt(match.runs, match.model.end, "end");
-  if (!start || !end) return;
-
-  const range = container.ownerDocument.createRange();
-  range.setStart(start.run.node, start.offset);
-  range.setEnd(end.run.node, end.offset);
-  range.deleteContents();
-  range.insertNode(renderInlineAnnotationModelToFragment(match.model, container.ownerDocument, OBSIDIAN_RENDER_OPTIONS));
+  return { replacements: renderContainer(root) };
 }
